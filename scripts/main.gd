@@ -33,6 +33,7 @@ func _ready() -> void:
 	panels["invest"] = InvestPanel.new()
 	panels["gacha"] = GachaPanel.new()
 	panels["prestige"] = PrestigePanel.new()
+	panels["achievement"] = AchievementPanel.new()
 
 	for key in panels.keys():
 		var p: Control = panels[key]

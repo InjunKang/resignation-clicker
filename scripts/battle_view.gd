@@ -25,9 +25,13 @@ var enemy_name_label: Label
 var enemy_hp_bar: ProgressBar
 var enemy_icon_label: Label
 var player_hp_bar: ProgressBar
+var player_icon_label: Label
 var boss_timer_label: Label
 var log_label: Label
 var auto_toggle: CheckButton
+var battle_area: Control
+var enemy_box: VBoxContainer
+var player_box: VBoxContainer
 
 func _ready() -> void:
 	custom_minimum_size = Vector2(0, 360)
@@ -43,7 +47,7 @@ func _build_ui() -> void:
 	root_vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(root_vbox)
 
-	var battle_area := Control.new()
+	battle_area = Control.new()
 	battle_area.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root_vbox.add_child(battle_area)
 
@@ -52,7 +56,7 @@ func _build_ui() -> void:
 	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
 	battle_area.add_child(hbox)
 
-	var enemy_box := VBoxContainer.new()
+	enemy_box = VBoxContainer.new()
 	enemy_box.custom_minimum_size = Vector2(280, 0)
 	hbox.add_child(enemy_box)
 
@@ -79,11 +83,11 @@ func _build_ui() -> void:
 	vs_label.add_theme_font_size_override("font_size", 36)
 	hbox.add_child(vs_label)
 
-	var player_box := VBoxContainer.new()
+	player_box = VBoxContainer.new()
 	player_box.custom_minimum_size = Vector2(280, 0)
 	hbox.add_child(player_box)
 
-	var player_icon_label := Label.new()
+	player_icon_label = Label.new()
 	player_icon_label.text = "🧑‍💼"
 	player_icon_label.add_theme_font_size_override("font_size", 48)
 	player_icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -208,6 +212,26 @@ func _refresh_skill_bar() -> void:
 			btn.text = "%s\n%ds" % [data["icon"], int(ceil(cd))]
 			btn.disabled = true
 
+# --- 타격감(데미지 숫자 / 피격 플래시) ---
+
+func _spawn_floating_number(anchor: Control, text: String, color: Color) -> void:
+	var lbl := Label.new()
+	lbl.text = text
+	lbl.add_theme_color_override("font_color", color)
+	lbl.add_theme_font_size_override("font_size", 20)
+	lbl.position = anchor.position + Vector2(anchor.size.x * 0.5 - 16, 56)
+	battle_area.add_child(lbl)
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(lbl, "position:y", lbl.position.y - 36, 0.8)
+	tween.tween_property(lbl, "modulate:a", 0.0, 0.8)
+	tween.chain().tween_callback(lbl.queue_free)
+
+func _flash(control: Control) -> void:
+	var tween := create_tween()
+	tween.tween_property(control, "modulate", Color(1.6, 1.6, 1.6), 0.05)
+	tween.tween_property(control, "modulate", Color(1, 1, 1), 0.15)
+
 # --- 전투 ---
 
 func _gold_multiplier() -> float:
@@ -224,6 +248,8 @@ func _player_attack_tick() -> void:
 		log_label.text = "월급루팡! 대박 효율!"
 	dmg += GameState.get_companion_dps() * ATTACK_ROLL_INTERVAL
 	enemy_hp -= dmg
+	_spawn_floating_number(enemy_box, "-%s" % Fmt.short(dmg), Color(1.0, 0.35, 0.35) if crit else Color(1, 1, 1))
+	_flash(enemy_icon_label)
 	_check_enemy_death()
 
 func _check_enemy_death() -> void:
@@ -242,6 +268,7 @@ func _on_boss_defeated() -> void:
 	var company_index: int = GameData.get_company_index(GameState.stage_index)
 	GameState.add_gold(GameData.get_boss_gold_reward(GameState.stage_index) * _gold_multiplier())
 	GameState.add_stress(GameData.get_boss_stress_reward(GameState.stage_index))
+	GameState.register_boss_kill()
 	if GameState.register_boss_first_clear(company_index):
 		GameState.add_diamond(GameData.BOSS_FIRST_CLEAR_DIAMOND_REWARD)
 		log_label.text = "%s 격파! 첫 클리어 보너스 법인카드 +%d" % [_boss_data.get("name", ""), int(GameData.BOSS_FIRST_CLEAR_DIAMOND_REWARD)]
@@ -259,6 +286,8 @@ func _boss_attack_tick() -> void:
 		return
 	var dmg: float = max(1.0, boss_atk - GameState.def)
 	player_hp = max(0.0, player_hp - dmg)
+	_spawn_floating_number(player_box, "-%s" % Fmt.short(dmg), Color(1.0, 0.6, 0.2))
+	_flash(player_icon_label)
 
 func _on_boss_fail() -> void:
 	log_label.text = "멘탈이 나갔다... 다시 도전!"
@@ -311,11 +340,17 @@ func _on_skill_button_pressed(id: String) -> void:
 func _cast_skill(id: String) -> void:
 	match id:
 		"blame":
-			enemy_hp -= enemy_max_hp * 0.10
+			var dmg: float = enemy_max_hp * 0.10
+			enemy_hp -= dmg
+			_spawn_floating_number(enemy_box, "-%s" % Fmt.short(dmg), Color(1.0, 0.9, 0.3))
+			_flash(enemy_icon_label)
 			log_label.text = "네 탓이오! %s 탓이야!" % enemy_name
 			_check_enemy_death()
 		"chopper":
-			enemy_hp -= enemy_max_hp * 0.20
+			var dmg: float = enemy_max_hp * 0.20
+			enemy_hp -= dmg
+			_spawn_floating_number(enemy_box, "-%s" % Fmt.short(dmg), Color(1.0, 0.9, 0.3))
+			_flash(enemy_icon_label)
 			log_label.text = "전무님이 헬기 타고 등장! 대가리 박아!"
 			_check_enemy_death()
 		# "nep", "coffee"는 지속시간(active) 동안의 상태 플래그로만 동작 (즉발 효과 없음)

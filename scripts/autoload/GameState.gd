@@ -38,6 +38,14 @@ var _stock_tick_timer: float = 0.0
 var prestige_currency: int = 0
 var prestige_levels: Dictionary = {"atk_boost": 0, "offline_boost": 0}
 
+# 업적용 평생 누적 스탯 — 사직서를 던져도 리셋되지 않음
+var lifetime_max_stage_index: int = 0
+var total_mob_kills: int = 0
+var total_boss_kills: int = 0
+var prestige_count: int = 0
+var equipment_ever_maxed: bool = false
+var achievements_claimed: Dictionary = {}
+
 var last_save_unix: int = 0
 
 # 파생 스탯 (recalculate_stats에서 갱신)
@@ -111,6 +119,8 @@ func upgrade_equipment(slot: String) -> bool:
 	if not spend_gold(cost):
 		return false
 	equipment_levels[slot] = level + 1
+	if equipment_levels[slot] >= max_level:
+		equipment_ever_maxed = true
 	recalculate_stats()
 	equipment_changed.emit()
 	return true
@@ -120,10 +130,15 @@ func upgrade_equipment(slot: String) -> bool:
 func advance_stage() -> void:
 	stage_index += 1
 	mobs_defeated_in_stage = 0
+	lifetime_max_stage_index = maxi(lifetime_max_stage_index, stage_index)
 	stage_changed.emit()
 
 func register_mob_kill() -> void:
 	mobs_defeated_in_stage += 1
+	total_mob_kills += 1
+
+func register_boss_kill() -> void:
+	total_boss_kills += 1
 
 func is_boss_stage() -> bool:
 	return mobs_defeated_in_stage >= GameData.MOBS_PER_STAGE
@@ -246,6 +261,8 @@ func do_gacha() -> Dictionary:
 	var new_level: int = mini(equipment_levels[slot] + levels, max_level)
 	var actual_gain: int = new_level - equipment_levels[slot]
 	equipment_levels[slot] = new_level
+	if new_level >= max_level:
+		equipment_ever_maxed = true
 	recalculate_stats()
 	currency_changed.emit()
 	equipment_changed.emit()
@@ -264,6 +281,7 @@ func can_prestige() -> bool:
 func do_prestige() -> int:
 	var reward: int = GameData.get_prestige_reward(stage_index)
 	prestige_currency += reward
+	prestige_count += 1
 
 	gold = 0.0
 	stress = 0.0
@@ -300,6 +318,40 @@ func buy_prestige_upgrade(id: String) -> bool:
 	currency_changed.emit()
 	return true
 
+# --- 업적 ---
+
+func get_achievement_progress(a: Dictionary) -> float:
+	match a["type"]:
+		"stage":
+			return 1.0 if lifetime_max_stage_index >= a["value"] else 0.0
+		"mob_kills":
+			return clamp(float(total_mob_kills) / a["value"], 0.0, 1.0)
+		"boss_kills":
+			return clamp(float(total_boss_kills) / a["value"], 0.0, 1.0)
+		"prestige_count":
+			return clamp(float(prestige_count) / a["value"], 0.0, 1.0)
+		"equipment_maxed":
+			return 1.0 if equipment_ever_maxed else 0.0
+	return 0.0
+
+func is_achievement_complete(a: Dictionary) -> bool:
+	return get_achievement_progress(a) >= 1.0
+
+func is_achievement_claimed(id: String) -> bool:
+	return achievements_claimed.get(id, false)
+
+func claim_achievement(id: String) -> bool:
+	if is_achievement_claimed(id):
+		return false
+	for a in GameData.ACHIEVEMENTS:
+		if a["id"] == id:
+			if not is_achievement_complete(a):
+				return false
+			achievements_claimed[id] = true
+			add_diamond(a["reward"])
+			return true
+	return false
+
 # --- 저장/불러오기 ---
 
 func to_save_dict() -> Dictionary:
@@ -315,6 +367,12 @@ func to_save_dict() -> Dictionary:
 		"stock_shares": stock_shares.duplicate(),
 		"prestige_currency": prestige_currency,
 		"prestige_levels": prestige_levels.duplicate(),
+		"lifetime_max_stage_index": lifetime_max_stage_index,
+		"total_mob_kills": total_mob_kills,
+		"total_boss_kills": total_boss_kills,
+		"prestige_count": prestige_count,
+		"equipment_ever_maxed": equipment_ever_maxed,
+		"achievements_claimed": achievements_claimed.duplicate(),
 		"last_save_unix": Time.get_unix_time_from_system(),
 	}
 
@@ -337,6 +395,12 @@ func load_from_dict(data: Dictionary) -> void:
 	var levels: Dictionary = data.get("prestige_levels", {})
 	for key in prestige_levels.keys():
 		prestige_levels[key] = levels.get(key, 0)
+	lifetime_max_stage_index = data.get("lifetime_max_stage_index", stage_index)
+	total_mob_kills = data.get("total_mob_kills", 0)
+	total_boss_kills = data.get("total_boss_kills", 0)
+	prestige_count = data.get("prestige_count", 0)
+	equipment_ever_maxed = data.get("equipment_ever_maxed", false)
+	achievements_claimed = data.get("achievements_claimed", {})
 	last_save_unix = data.get("last_save_unix", int(Time.get_unix_time_from_system()))
 	recalculate_stats()
 	currency_changed.emit()

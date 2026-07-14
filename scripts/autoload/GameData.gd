@@ -184,3 +184,18 @@ func get_prestige_upgrade_cost(index: int, level: int) -> int:
 
 func get_prestige_reward(max_stage_reached: int) -> int:
 	return int(max_stage_reached / 2)
+
+# --- 업적 ---
+# type: "stage" (lifetime_max_stage_index), "mob_kills", "boss_kills",
+#       "prestige_count", "equipment_maxed" (bool)
+
+const ACHIEVEMENTS := [
+	{"id": "first_day", "name": "첫 출근", "desc": "게임을 시작한다", "type": "stage", "value": 0, "reward": 5},
+	{"id": "busywork_100", "name": "잡무의 신", "desc": "잡무 100회 처리", "type": "mob_kills", "value": 100, "reward": 10},
+	{"id": "busywork_1000", "name": "잡무 마스터", "desc": "잡무 1,000회 처리", "type": "mob_kills", "value": 1000, "reward": 20},
+	{"id": "first_boss", "name": "첫 승리", "desc": "상사 1명 처치", "type": "boss_kills", "value": 1, "reward": 10},
+	{"id": "boss_hunter", "name": "보스 사냥꾼", "desc": "상사 10명 처치", "type": "boss_kills", "value": 10, "reward": 20},
+	{"id": "gear_maxed", "name": "장비 마스터", "desc": "장비 1종을 최고 등급까지 강화", "type": "equipment_maxed", "value": 1, "reward": 15},
+	{"id": "first_quit", "name": "이직의 정석", "desc": "사직서 1회 제출", "type": "prestige_count", "value": 1, "reward": 20},
+	{"id": "job_hopper", "name": "N수생", "desc": "사직서 5회 제출", "type": "prestige_count", "value": 5, "reward": 50},
+]

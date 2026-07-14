@@ -18,6 +18,7 @@ func _ready() -> void:
 		{"id": "invest", "label": "재테크"},
 		{"id": "gacha", "label": "뽑기"},
 		{"id": "prestige", "label": "사직서"},
+		{"id": "achievement", "label": "업적"},
 	]
 	for tab in tabs:
 		var btn := Button.new()
