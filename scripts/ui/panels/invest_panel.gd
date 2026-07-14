@@ -5,14 +5,21 @@ extends Control
 var rows: Dictionary = {}
 
 func _ready() -> void:
+	var scroll := ScrollContainer.new()
+	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(scroll)
+
 	var vbox := VBoxContainer.new()
-	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(vbox)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(vbox)
 
 	for s in GameData.STOCKS:
 		var id: String = s["id"]
+		var block := VBoxContainer.new()
+		vbox.add_child(block)
+
 		var row := HBoxContainer.new()
-		vbox.add_child(row)
+		block.add_child(row)
 
 		var info_label := Label.new()
 		info_label.custom_minimum_size = Vector2(380, 0)
@@ -27,6 +34,10 @@ func _ready() -> void:
 		sell_btn.text = "매도"
 		sell_btn.pressed.connect(func() -> void: GameState.sell_stock(id))
 		row.add_child(sell_btn)
+
+		var chart := StockChart.new()
+		chart.stock_id = id
+		block.add_child(chart)
 
 		rows[id] = {"info": info_label, "buy": buy_btn, "sell": sell_btn}
 

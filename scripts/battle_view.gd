@@ -19,6 +19,7 @@ var _attack_timer: float = 0.0
 var _boss_attack_timer: float = 0.0
 
 var _skills: Array = []
+var auto_cast_enabled: bool = true
 
 var enemy_name_label: Label
 var enemy_hp_bar: ProgressBar
@@ -26,13 +27,13 @@ var enemy_icon_label: Label
 var player_hp_bar: ProgressBar
 var boss_timer_label: Label
 var log_label: Label
-var skill_status_label: Label
+var auto_toggle: CheckButton
 
 func _ready() -> void:
 	custom_minimum_size = Vector2(0, 360)
-	_build_ui()
 	for s in GameData.SKILLS:
-		_skills.append({"data": s, "cd": 0.0, "active": 0.0})
+		_skills.append({"data": s, "cd": 0.0, "active": 0.0, "button": null})
+	_build_ui()
 	GameState.stats_changed.connect(_on_stats_changed)
 	player_hp = GameState.max_hp
 	_spawn_next_enemy()
@@ -42,10 +43,14 @@ func _build_ui() -> void:
 	root_vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(root_vbox)
 
+	var battle_area := Control.new()
+	battle_area.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root_vbox.add_child(battle_area)
+
 	var hbox := HBoxContainer.new()
+	hbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	hbox.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	root_vbox.add_child(hbox)
+	battle_area.add_child(hbox)
 
 	var enemy_box := VBoxContainer.new()
 	enemy_box.custom_minimum_size = Vector2(280, 0)
@@ -93,22 +98,39 @@ func _build_ui() -> void:
 	player_hp_bar.show_percentage = false
 	player_box.add_child(player_hp_bar)
 
-	log_label = Label.new()
-	log_label.text = "자동으로 업무를 처리하는 중..."
-	log_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	root_vbox.add_child(log_label)
-
-	skill_status_label = Label.new()
-	skill_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	skill_status_label.add_theme_font_size_override("font_size", 12)
-	root_vbox.add_child(skill_status_label)
-
 	var tap_button := Button.new()
 	tap_button.flat = true
 	tap_button.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	tap_button.focus_mode = Control.FOCUS_NONE
 	tap_button.pressed.connect(_on_tap)
-	add_child(tap_button)
+	battle_area.add_child(tap_button)
+
+	log_label = Label.new()
+	log_label.text = "자동으로 업무를 처리하는 중..."
+	log_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	root_vbox.add_child(log_label)
+
+	var skill_row := HBoxContainer.new()
+	skill_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	root_vbox.add_child(skill_row)
+	for sk in _skills:
+		var data: Dictionary = sk["data"]
+		var btn := Button.new()
+		btn.text = data["icon"]
+		btn.custom_minimum_size = Vector2(56, 0)
+		btn.focus_mode = Control.FOCUS_NONE
+		btn.tooltip_text = data["desc"]
+		btn.pressed.connect(func() -> void: _on_skill_button_pressed(data["id"]))
+		skill_row.add_child(btn)
+		sk["button"] = btn
+
+	auto_toggle = CheckButton.new()
+	auto_toggle.text = "자동 발동"
+	auto_toggle.button_pressed = true
+	auto_toggle.focus_mode = Control.FOCUS_NONE
+	auto_toggle.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	auto_toggle.toggled.connect(func(pressed: bool) -> void: auto_cast_enabled = pressed)
+	root_vbox.add_child(auto_toggle)
 
 func _process(delta: float) -> void:
 	_attack_timer += delta
@@ -128,7 +150,7 @@ func _process(delta: float) -> void:
 
 	_update_skills(delta)
 	_refresh_bars()
-	_refresh_skill_status()
+	_refresh_skill_bar()
 
 func _spawn_next_enemy() -> void:
 	if GameState.is_boss_stage():
@@ -170,16 +192,21 @@ func _refresh_bars() -> void:
 	player_hp_bar.max_value = GameState.max_hp
 	player_hp_bar.value = player_hp
 
-func _refresh_skill_status() -> void:
-	var parts: Array = []
+func _refresh_skill_bar() -> void:
 	for sk in _skills:
 		var data: Dictionary = sk["data"]
-		if GameState.stage_index < data["unlock_stage"]:
+		var btn: Button = sk["button"]
+		var unlocked: bool = GameState.stage_index >= data["unlock_stage"]
+		btn.visible = unlocked
+		if not unlocked:
 			continue
 		var cd: float = sk["cd"]
-		var status: String = "준비" if cd <= 0.0 else "%ds" % int(ceil(cd))
-		parts.append("%s %s" % [data["icon"], status])
-	skill_status_label.text = "  ".join(parts)
+		if cd <= 0.0:
+			btn.text = "%s\n준비" % data["icon"]
+			btn.disabled = auto_cast_enabled # 자동 모드에서는 중복 발동 방지를 위해 수동 클릭 비활성화
+		else:
+			btn.text = "%s\n%ds" % [data["icon"], int(ceil(cd))]
+			btn.disabled = true
 
 # --- 전투 ---
 
@@ -266,10 +293,20 @@ func _update_skills(delta: float) -> void:
 			sk["active"] = max(0.0, sk["active"] - delta)
 		if sk["cd"] > 0.0:
 			sk["cd"] = max(0.0, sk["cd"] - delta)
-		if sk["cd"] <= 0.0 and sk["active"] <= 0.0:
+		if auto_cast_enabled and sk["cd"] <= 0.0 and sk["active"] <= 0.0:
 			_cast_skill(data["id"])
 			sk["cd"] = data["cooldown"]
 			sk["active"] = data["duration"]
+
+func _on_skill_button_pressed(id: String) -> void:
+	if auto_cast_enabled:
+		return
+	for sk in _skills:
+		if sk["data"]["id"] == id and GameState.stage_index >= sk["data"]["unlock_stage"] and sk["cd"] <= 0.0:
+			_cast_skill(id)
+			sk["cd"] = sk["data"]["cooldown"]
+			sk["active"] = sk["data"]["duration"]
+			return
 
 func _cast_skill(id: String) -> void:
 	match id:

@@ -149,6 +149,7 @@ const SKILLS := [
 # --- 재테크(가짜 주식) ---
 
 const STOCK_TICK_INTERVAL := 3.0
+const STOCK_HISTORY_LENGTH := 30
 
 const STOCKS := [
 	{"id": "samsong", "name": "삼송전자", "icon": "📺", "base_price": 100.0, "volatility": 0.05, "crash_chance": 0.01},
@@ -160,7 +161,13 @@ const STOCKS := [
 const GACHA_COST_DIAMOND := 10
 const GACHA_MIN_LEVELS := 1
 const GACHA_MAX_LEVELS := 3
+const GACHA_PITY_THRESHOLD := 10 # 이 횟수만큼 연속으로 최고 등급을 못 뽑으면 다음 뽑기는 확정
 const BOSS_FIRST_CLEAR_DIAMOND_REWARD := 5.0
+
+const GACHA_RARITY_NAMES := {1: "일반", 2: "희귀", 3: "전설"}
+
+func get_gacha_rarity_name(levels: int) -> String:
+	return GACHA_RARITY_NAMES.get(levels, "일반")
 
 # --- 사직서 던지기 (프레스티지) ---
 

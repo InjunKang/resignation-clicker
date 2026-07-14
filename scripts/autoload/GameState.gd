@@ -24,10 +24,14 @@ var equipment_levels: Dictionary = {
 # 회사(프레스티지 사이클)당 1회만 지급되는 보스 최초 처치 다이아 보상 추적
 var boss_first_clear: Dictionary = {}
 
+var gacha_pity: int = 0
+
 # 재테크(가짜 주식): id -> 보유 수량(주)
 var stock_shares: Dictionary = {}
 # id -> 현재가 (세션마다 기준가로 재설정, 저장하지 않음)
 var stock_prices: Dictionary = {}
+# id -> 최근 가격 이력(차트용, 세션마다 재설정, 저장하지 않음)
+var stock_price_history: Dictionary = {}
 var _stock_tick_timer: float = 0.0
 
 # 사직서 던지기(프레스티지) — 리셋되지 않는 영구 진행치
@@ -186,6 +190,7 @@ func _init_stock_prices() -> void:
 	for s in GameData.STOCKS:
 		var id: String = s["id"]
 		stock_prices[id] = s["base_price"]
+		stock_price_history[id] = [s["base_price"]]
 		if not stock_shares.has(id):
 			stock_shares[id] = 0.0
 
@@ -197,6 +202,10 @@ func _tick_stock_market() -> void:
 		else:
 			var change: float = 1.0 + randf_range(-s["volatility"], s["volatility"])
 			stock_prices[id] = max(stock_prices[id] * change, s["base_price"] * 0.02)
+		var history: Array = stock_price_history[id]
+		history.append(stock_prices[id])
+		if history.size() > GameData.STOCK_HISTORY_LENGTH:
+			history.pop_front()
 	stock_changed.emit()
 
 func buy_stock(id: String, amount: float) -> bool:
@@ -225,7 +234,14 @@ func do_gacha() -> Dictionary:
 	diamond -= GameData.GACHA_COST_DIAMOND
 	var slots: Array = GameData.EQUIPMENT.keys()
 	var slot: String = slots[randi() % slots.size()]
-	var levels: int = randi_range(GameData.GACHA_MIN_LEVELS, GameData.GACHA_MAX_LEVELS)
+
+	var levels: int
+	if gacha_pity >= GameData.GACHA_PITY_THRESHOLD - 1:
+		levels = GameData.GACHA_MAX_LEVELS
+	else:
+		levels = randi_range(GameData.GACHA_MIN_LEVELS, GameData.GACHA_MAX_LEVELS)
+	gacha_pity = 0 if levels >= GameData.GACHA_MAX_LEVELS else gacha_pity + 1
+
 	var max_level: int = GameData.get_equipment_max_level(slot)
 	var new_level: int = mini(equipment_levels[slot] + levels, max_level)
 	var actual_gain: int = new_level - equipment_levels[slot]
@@ -233,7 +249,12 @@ func do_gacha() -> Dictionary:
 	recalculate_stats()
 	currency_changed.emit()
 	equipment_changed.emit()
-	return {"success": true, "slot": slot, "levels": actual_gain}
+	return {
+		"success": true,
+		"slot": slot,
+		"levels": actual_gain,
+		"rarity": GameData.get_gacha_rarity_name(levels),
+	}
 
 # --- 사직서 던지기 (프레스티지) ---
 
@@ -290,6 +311,7 @@ func to_save_dict() -> Dictionary:
 		"mobs_defeated_in_stage": mobs_defeated_in_stage,
 		"equipment_levels": equipment_levels.duplicate(),
 		"boss_first_clear": boss_first_clear.duplicate(),
+		"gacha_pity": gacha_pity,
 		"stock_shares": stock_shares.duplicate(),
 		"prestige_currency": prestige_currency,
 		"prestige_levels": prestige_levels.duplicate(),
@@ -306,6 +328,7 @@ func load_from_dict(data: Dictionary) -> void:
 	for key in equipment_levels.keys():
 		equipment_levels[key] = eq.get(key, 0)
 	boss_first_clear = data.get("boss_first_clear", {})
+	gacha_pity = data.get("gacha_pity", 0)
 	var shares: Dictionary = data.get("stock_shares", {})
 	for s in GameData.STOCKS:
 		var id: String = s["id"]
