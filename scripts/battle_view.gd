@@ -13,6 +13,7 @@ var is_boss: bool = false
 var boss_time_left: float = 0.0
 var _boss_data: Dictionary = {}
 var _boss_fail_streak: int = 0
+var _boss_retry_mobs_remaining: int = 0
 
 const BOSS_FAIL_HINT_THRESHOLD := 3
 
@@ -184,7 +185,9 @@ func _process(delta: float) -> void:
 	_refresh_skill_bar()
 
 func _spawn_next_enemy() -> void:
-	if GameState.is_boss_stage():
+	if _boss_retry_mobs_remaining > 0:
+		_spawn_mob()
+	elif GameState.is_boss_stage():
 		_spawn_boss()
 	else:
 		_spawn_mob()
@@ -218,7 +221,6 @@ func _spawn_boss() -> void:
 	enemy_max_hp = GameData.get_boss_hp(GameState.stage_index)
 	enemy_hp = enemy_max_hp
 	boss_time_left = _boss_data["time_limit"] + GameState.get_boss_time_bonus()
-	_boss_fail_streak = 0
 	log_label.text = "%s: \"%s\"" % [enemy_name, _boss_data["quote"]]
 	_refresh_bars()
 
@@ -297,6 +299,10 @@ func _check_enemy_death() -> void:
 func _on_mob_defeated() -> void:
 	GameState.add_gold(GameData.get_mob_gold_reward(GameState.stage_index) * _gold_multiplier())
 	GameState.register_mob_kill()
+	if _boss_retry_mobs_remaining > 0:
+		_boss_retry_mobs_remaining -= 1
+		if _boss_retry_mobs_remaining == 0:
+			log_label.text = "부하들 정리 완료! 다시 보스에게 간다."
 	_spawn_next_enemy()
 
 func _on_boss_defeated() -> void:
@@ -304,6 +310,7 @@ func _on_boss_defeated() -> void:
 	GameState.add_gold(GameData.get_boss_gold_reward(GameState.stage_index) * _gold_multiplier())
 	GameState.add_stress(GameData.get_boss_stress_reward(GameState.stage_index))
 	GameState.register_boss_kill()
+	_boss_fail_streak = 0
 	if GameState.register_boss_first_clear(company_index):
 		GameState.add_diamond(GameData.BOSS_FIRST_CLEAR_DIAMOND_REWARD)
 		log_label.text = "%s 격파! 첫 클리어 보너스 법인카드 +%d" % [_boss_data.get("name", ""), int(GameData.BOSS_FIRST_CLEAR_DIAMOND_REWARD)]
@@ -331,11 +338,11 @@ func _on_boss_fail() -> void:
 	if _boss_fail_streak >= BOSS_FAIL_HINT_THRESHOLD:
 		log_label.text = "멘탈이 나갔다... '장비' 탭의 '전체 최대 강화'로 힘을 키워보세요!"
 	else:
-		log_label.text = "멘탈이 나갔다... 다시 도전!"
+		log_label.text = "멘탈이 나갔다... 부하 직원들부터 처리하고 다시 도전!"
 	player_hp = GameState.max_hp
-	enemy_hp = enemy_max_hp
-	boss_time_left = _boss_data.get("time_limit", 20.0) + GameState.get_boss_time_bonus()
 	_boss_attack_timer = 0.0
+	_boss_retry_mobs_remaining = GameData.BOSS_RETRY_MOB_COUNT
+	_spawn_next_enemy()
 
 func _on_tap() -> void:
 	Sfx.play_tap()

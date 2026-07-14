@@ -5,6 +5,7 @@ extends Node
 const STAGE_COUNT := 10 # 회사당 서브스테이지 수 (1-1 ~ 1-10)
 const MOBS_PER_STAGE := 10 # 보스 등장까지 처치해야 하는 몹 수
 const BOSS_ATTACK_INTERVAL := 2.0
+const BOSS_RETRY_MOB_COUNT := 3 # 보스전에서 지면 재도전 전에 처리해야 하는 부하 수
 
 const BASE_ATK := 5.0
 const BASE_HP := 50.0
