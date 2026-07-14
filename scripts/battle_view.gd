@@ -3,7 +3,7 @@ extends Control
 ## 전투 화면: 몹/보스 vs 김대리. 코어 루프(자동 공격, 보스전, 결사대 DPS,
 ## 액티브 스킬 오토캐스트, 탭 미니게임)를 담당한다.
 
-const ATTACK_ROLL_INTERVAL := 1.0
+const ATTACK_ROLL_INTERVAL := 0.5 # 더 스피드있게 느껴지도록 공격 빈도를 2배로(초당 데미지 총량은 동일)
 
 var enemy_hp: float = 0.0
 var enemy_max_hp: float = 0.0

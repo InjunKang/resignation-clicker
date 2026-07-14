@@ -3,11 +3,12 @@ extends Node
 ## 이 스크립트는 런타임 상태를 갖지 않는다. 상태는 GameState에서 관리한다.
 
 const STAGE_COUNT := 10 # 회사당 서브스테이지 수 (1-1 ~ 1-10)
-const MOBS_PER_STAGE := 10 # 보스 등장까지 처치해야 하는 몹 수
+const MOBS_PER_STAGE := 20 # 보스 등장까지 처치해야 하는 몹 수 (스테이지를 더 크게)
+const BOSS_HP_MOB_MULTIPLIER := 20.0 # 보스 체력 = 몹 체력 * 이 값 (MOBS_PER_STAGE와 분리)
 const BOSS_ATTACK_INTERVAL := 2.0
 const BOSS_RETRY_MOB_COUNT := 3 # 보스전에서 지면 재도전 전에 처리해야 하는 부하 수
 
-const BASE_ATK := 5.0
+const BASE_ATK := 8.0 # 초반 보스가 너무 강하다는 피드백으로 상향(5 -> 8)
 const BASE_HP := 50.0
 const BASE_DEF := 0.0
 
@@ -63,7 +64,7 @@ func get_mob_gold_reward(stage_index: int) -> float:
 	return 5.0 * pow(1.15, stage_index)
 
 func get_boss_hp(stage_index: int) -> float:
-	return get_mob_hp(stage_index) * MOBS_PER_STAGE * 3.0
+	return get_mob_hp(stage_index) * BOSS_HP_MOB_MULTIPLIER
 
 func get_boss_gold_reward(stage_index: int) -> float:
 	return get_mob_gold_reward(stage_index) * MOBS_PER_STAGE * 5.0
