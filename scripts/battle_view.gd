@@ -27,17 +27,19 @@ var auto_cast_enabled: bool = true
 var enemy_name_label: Label
 var enemy_hp_bar: ProgressBar
 var enemy_icon_label: Label
+var boss_portrait: TextureRect
 var player_hp_bar: ProgressBar
-var player_icon_label: Label
+var player_portrait: TextureRect
 var boss_timer_label: Label
 var log_label: Label
 var auto_toggle: CheckButton
 var battle_area: Control
 var enemy_box: VBoxContainer
 var player_box: VBoxContainer
+var enemy_portrait_stack: Control
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(0, 360)
+	custom_minimum_size = Vector2(0, 420)
 	for s in GameData.SKILLS:
 		_skills.append({"data": s, "cd": 0.0, "active": 0.0, "button": null})
 	_build_ui()
@@ -61,23 +63,41 @@ func _build_ui() -> void:
 
 	enemy_box = VBoxContainer.new()
 	enemy_box.custom_minimum_size = Vector2(280, 0)
+	enemy_box.add_theme_constant_override("separation", 6)
 	hbox.add_child(enemy_box)
 
+	enemy_portrait_stack = Control.new()
+	enemy_portrait_stack.custom_minimum_size = Vector2(0, 128)
+	enemy_box.add_child(enemy_portrait_stack)
+
 	enemy_icon_label = Label.new()
-	enemy_icon_label.add_theme_font_size_override("font_size", 48)
+	enemy_icon_label.add_theme_font_size_override("font_size", 64)
 	enemy_icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	enemy_box.add_child(enemy_icon_label)
+	enemy_icon_label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	enemy_portrait_stack.add_child(enemy_icon_label)
+
+	boss_portrait = TextureRect.new()
+	boss_portrait.custom_minimum_size = Vector2(128, 128)
+	boss_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	boss_portrait.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	boss_portrait.visible = false
+	enemy_portrait_stack.add_child(boss_portrait)
 
 	enemy_name_label = Label.new()
 	enemy_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	enemy_name_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	enemy_name_label.custom_minimum_size = Vector2(0, 30)
 	enemy_box.add_child(enemy_name_label)
 
 	enemy_hp_bar = ProgressBar.new()
 	enemy_hp_bar.show_percentage = false
+	enemy_hp_bar.custom_minimum_size = Vector2(0, 22)
+	enemy_hp_bar.add_theme_stylebox_override("fill", UiTheme.make_fill_style(UiTheme.COLOR_RED))
 	enemy_box.add_child(enemy_hp_bar)
 
 	boss_timer_label = Label.new()
 	boss_timer_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	boss_timer_label.custom_minimum_size = Vector2(0, 26)
 	boss_timer_label.visible = false
 	enemy_box.add_child(boss_timer_label)
 
@@ -88,21 +108,25 @@ func _build_ui() -> void:
 
 	player_box = VBoxContainer.new()
 	player_box.custom_minimum_size = Vector2(280, 0)
+	player_box.add_theme_constant_override("separation", 6)
 	hbox.add_child(player_box)
 
-	player_icon_label = Label.new()
-	player_icon_label.text = "🧑‍💼"
-	player_icon_label.add_theme_font_size_override("font_size", 48)
-	player_icon_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	player_box.add_child(player_icon_label)
+	player_portrait = TextureRect.new()
+	player_portrait.texture = load("res://assets/art/player.svg")
+	player_portrait.custom_minimum_size = Vector2(0, 128)
+	player_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	player_box.add_child(player_portrait)
 
 	var player_name_label := Label.new()
 	player_name_label.text = "김대리"
 	player_name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	player_name_label.custom_minimum_size = Vector2(0, 30)
 	player_box.add_child(player_name_label)
 
 	player_hp_bar = ProgressBar.new()
 	player_hp_bar.show_percentage = false
+	player_hp_bar.custom_minimum_size = Vector2(0, 22)
+	player_hp_bar.add_theme_stylebox_override("fill", UiTheme.make_fill_style(UiTheme.COLOR_GREEN))
 	player_box.add_child(player_hp_bar)
 
 	var tap_button := Button.new()
@@ -168,6 +192,8 @@ func _spawn_next_enemy() -> void:
 func _spawn_mob() -> void:
 	is_boss = false
 	boss_timer_label.visible = false
+	enemy_icon_label.visible = true
+	boss_portrait.visible = false
 	var company: Dictionary = GameData.get_company(GameState.stage_index)
 	var mobs: Array = company["mobs"]
 	var mob: Dictionary = mobs[GameState.mobs_defeated_in_stage % mobs.size()]
@@ -180,9 +206,13 @@ func _spawn_mob() -> void:
 func _spawn_boss() -> void:
 	is_boss = true
 	boss_timer_label.visible = true
+	enemy_icon_label.visible = false
+	boss_portrait.visible = true
 	_boss_attack_timer = 0.0
+	var company_index: int = GameData.get_company_index(GameState.stage_index)
 	var company: Dictionary = GameData.get_company(GameState.stage_index)
 	_boss_data = company["boss"]
+	boss_portrait.texture = load("res://assets/art/boss_%d.svg" % (company_index + 1))
 	enemy_name = _boss_data["name"]
 	enemy_icon = _boss_data["icon"]
 	enemy_max_hp = GameData.get_boss_hp(GameState.stage_index)
@@ -254,7 +284,7 @@ func _player_attack_tick() -> void:
 	dmg += GameState.get_companion_dps() * ATTACK_ROLL_INTERVAL
 	enemy_hp -= dmg
 	_spawn_floating_number(enemy_box, "-%s" % Fmt.short(dmg), Color(1.0, 0.35, 0.35) if crit else Color(1, 1, 1))
-	_flash(enemy_icon_label)
+	_flash(enemy_portrait_stack)
 	_check_enemy_death()
 
 func _check_enemy_death() -> void:
@@ -293,7 +323,7 @@ func _boss_attack_tick() -> void:
 	var dmg: float = max(1.0, boss_atk - GameState.def)
 	player_hp = max(0.0, player_hp - dmg)
 	_spawn_floating_number(player_box, "-%s" % Fmt.short(dmg), Color(1.0, 0.6, 0.2))
-	_flash(player_icon_label)
+	_flash(player_portrait)
 
 func _on_boss_fail() -> void:
 	Sfx.play_boss_fail()
@@ -357,14 +387,14 @@ func _cast_skill(id: String) -> void:
 			var dmg: float = enemy_max_hp * 0.10
 			enemy_hp -= dmg
 			_spawn_floating_number(enemy_box, "-%s" % Fmt.short(dmg), Color(1.0, 0.9, 0.3))
-			_flash(enemy_icon_label)
+			_flash(enemy_portrait_stack)
 			log_label.text = "네 탓이오! %s 탓이야!" % enemy_name
 			_check_enemy_death()
 		"chopper":
 			var dmg: float = enemy_max_hp * 0.20
 			enemy_hp -= dmg
 			_spawn_floating_number(enemy_box, "-%s" % Fmt.short(dmg), Color(1.0, 0.9, 0.3))
-			_flash(enemy_icon_label)
+			_flash(enemy_portrait_stack)
 			log_label.text = "전무님이 헬기 타고 등장! 대가리 박아!"
 			_check_enemy_death()
 		# "nep", "coffee"는 지속시간(active) 동안의 상태 플래그로만 동작 (즉발 효과 없음)

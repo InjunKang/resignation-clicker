@@ -11,6 +11,7 @@ func _ready() -> void:
 
 	var vbox := VBoxContainer.new()
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_theme_constant_override("separation", 14)
 	scroll.add_child(vbox)
 
 	for s in GameData.STOCKS:
@@ -18,20 +19,22 @@ func _ready() -> void:
 		var block := VBoxContainer.new()
 		vbox.add_child(block)
 
+		var info_label := Label.new()
+		info_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+		block.add_child(info_label)
+
 		var row := HBoxContainer.new()
 		block.add_child(row)
 
-		var info_label := Label.new()
-		info_label.custom_minimum_size = Vector2(380, 0)
-		row.add_child(info_label)
-
 		var buy_btn := Button.new()
 		buy_btn.text = "매수"
+		buy_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		buy_btn.pressed.connect(func() -> void: _on_buy(id))
 		row.add_child(buy_btn)
 
 		var sell_btn := Button.new()
 		sell_btn.text = "매도"
+		sell_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		sell_btn.pressed.connect(func() -> void: GameState.sell_stock(id))
 		row.add_child(sell_btn)
 

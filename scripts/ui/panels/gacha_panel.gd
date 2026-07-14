@@ -7,9 +7,14 @@ var result_label: Label
 var pity_label: Label
 
 func _ready() -> void:
+	var scroll := ScrollContainer.new()
+	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(scroll)
+
 	var vbox := VBoxContainer.new()
-	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(vbox)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_theme_constant_override("separation", 10)
+	scroll.add_child(vbox)
 
 	var desc := Label.new()
 	desc.text = "법인카드로 장비 슬롯 1개를 무작위로 강화합니다."
@@ -27,7 +32,8 @@ func _ready() -> void:
 
 	pity_label = Label.new()
 	pity_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	pity_label.add_theme_font_size_override("font_size", 12)
+	pity_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	pity_label.add_theme_font_size_override("font_size", 16)
 	vbox.add_child(pity_label)
 
 	GameState.currency_changed.connect(_refresh)
@@ -41,7 +47,7 @@ func _on_gacha() -> void:
 		var levels: int = res["levels"]
 		result_label.text = "[%s] %s +%d Lv! 🎉" % [res["rarity"], slot_label, levels]
 		result_label.add_theme_color_override("font_color", GameData.get_gacha_rarity_color(levels))
-		result_label.add_theme_font_size_override("font_size", 20 if levels >= GameData.GACHA_MAX_LEVELS else 16)
+		result_label.add_theme_font_size_override("font_size", 26 if levels >= GameData.GACHA_MAX_LEVELS else 20)
 		_pulse(result_label)
 	else:
 		result_label.text = "법인카드가 부족합니다."

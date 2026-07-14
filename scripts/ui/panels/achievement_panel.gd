@@ -11,14 +11,14 @@ func _ready() -> void:
 
 	var vbox := VBoxContainer.new()
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_theme_constant_override("separation", 10)
 	scroll.add_child(vbox)
 
 	for a in GameData.ACHIEVEMENTS:
-		var row := HBoxContainer.new()
+		var row := VBoxContainer.new()
 		vbox.add_child(row)
 
 		var lbl := Label.new()
-		lbl.custom_minimum_size = Vector2(420, 0)
 		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
 		row.add_child(lbl)
 

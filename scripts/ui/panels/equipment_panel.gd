@@ -12,6 +12,7 @@ func _ready() -> void:
 
 	var vbox := VBoxContainer.new()
 	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_theme_constant_override("separation", 10)
 	scroll.add_child(vbox)
 
 	upgrade_all_btn = Button.new()
@@ -20,22 +21,26 @@ func _ready() -> void:
 	vbox.add_child(upgrade_all_btn)
 
 	for slot in GameData.EQUIPMENT.keys():
-		var row := HBoxContainer.new()
+		var row := VBoxContainer.new()
 		vbox.add_child(row)
 
 		var name_label := Label.new()
-		name_label.custom_minimum_size = Vector2(300, 0)
+		name_label.autowrap_mode = TextServer.AUTOWRAP_WORD
 		row.add_child(name_label)
+
+		var btn_row := HBoxContainer.new()
+		row.add_child(btn_row)
 
 		var upgrade_btn := Button.new()
 		upgrade_btn.text = "업그레이드"
+		upgrade_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		upgrade_btn.pressed.connect(_on_upgrade_pressed.bind(slot))
-		row.add_child(upgrade_btn)
+		btn_row.add_child(upgrade_btn)
 
 		var max_btn := Button.new()
 		max_btn.text = "MAX"
 		max_btn.pressed.connect(_on_upgrade_max_pressed.bind(slot))
-		row.add_child(max_btn)
+		btn_row.add_child(max_btn)
 
 		rows[slot] = {"name_label": name_label, "button": upgrade_btn, "max_button": max_btn}
 

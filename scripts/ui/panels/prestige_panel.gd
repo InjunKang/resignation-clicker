@@ -8,9 +8,14 @@ var confirm_dialog: ConfirmationDialog
 var rows: Dictionary = {}
 
 func _ready() -> void:
+	var scroll := ScrollContainer.new()
+	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(scroll)
+
 	var vbox := VBoxContainer.new()
-	vbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(vbox)
+	vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_theme_constant_override("separation", 10)
+	scroll.add_child(vbox)
 
 	info_label = Label.new()
 	info_label.autowrap_mode = TextServer.AUTOWRAP_WORD
@@ -28,11 +33,11 @@ func _ready() -> void:
 
 	for i in GameData.PRESTIGE_UPGRADES.size():
 		var u: Dictionary = GameData.PRESTIGE_UPGRADES[i]
-		var row := HBoxContainer.new()
+		var row := VBoxContainer.new()
 		vbox.add_child(row)
 
 		var lbl := Label.new()
-		lbl.custom_minimum_size = Vector2(380, 0)
+		lbl.autowrap_mode = TextServer.AUTOWRAP_WORD
 		row.add_child(lbl)
 
 		var btn := Button.new()
