@@ -177,9 +177,17 @@ const GACHA_PITY_THRESHOLD := 10 # 이 횟수만큼 연속으로 최고 등급�
 const BOSS_FIRST_CLEAR_DIAMOND_REWARD := 5.0
 
 const GACHA_RARITY_NAMES := {1: "일반", 2: "희귀", 3: "전설"}
+const GACHA_RARITY_COLORS := {
+	1: Color(0.85, 0.85, 0.85),
+	2: Color(0.4, 0.7, 1.0),
+	3: Color(1.0, 0.82, 0.2),
+}
 
 func get_gacha_rarity_name(levels: int) -> String:
 	return GACHA_RARITY_NAMES.get(levels, "일반")
+
+func get_gacha_rarity_color(levels: int) -> Color:
+	return GACHA_RARITY_COLORS.get(levels, Color.WHITE)
 
 # --- 사직서 던지기 (프레스티지) ---
 

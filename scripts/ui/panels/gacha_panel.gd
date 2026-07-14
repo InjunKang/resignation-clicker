@@ -38,10 +38,22 @@ func _on_gacha() -> void:
 	if res.get("success", false):
 		Sfx.play_gacha()
 		var slot_label: String = GameData.EQUIPMENT[res["slot"]]["label"]
-		result_label.text = "[%s] %s +%d Lv! 🎉" % [res["rarity"], slot_label, res["levels"]]
+		var levels: int = res["levels"]
+		result_label.text = "[%s] %s +%d Lv! 🎉" % [res["rarity"], slot_label, levels]
+		result_label.add_theme_color_override("font_color", GameData.get_gacha_rarity_color(levels))
+		result_label.add_theme_font_size_override("font_size", 20 if levels >= GameData.GACHA_MAX_LEVELS else 16)
+		_pulse(result_label)
 	else:
 		result_label.text = "법인카드가 부족합니다."
+		result_label.remove_theme_color_override("font_color")
+		result_label.remove_theme_font_size_override("font_size")
 	_refresh()
+
+func _pulse(control: Control) -> void:
+	control.scale = Vector2(1.4, 1.4)
+	control.pivot_offset = control.size * 0.5
+	var tween := create_tween()
+	tween.tween_property(control, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 func _refresh() -> void:
 	gacha_btn.text = "뽑기 (💳%d)" % GameData.GACHA_COST_DIAMOND

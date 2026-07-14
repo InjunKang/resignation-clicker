@@ -12,6 +12,9 @@ var enemy_icon: String = ""
 var is_boss: bool = false
 var boss_time_left: float = 0.0
 var _boss_data: Dictionary = {}
+var _boss_fail_streak: int = 0
+
+const BOSS_FAIL_HINT_THRESHOLD := 3
 
 var player_hp: float = 0.0
 
@@ -185,6 +188,7 @@ func _spawn_boss() -> void:
 	enemy_max_hp = GameData.get_boss_hp(GameState.stage_index)
 	enemy_hp = enemy_max_hp
 	boss_time_left = _boss_data["time_limit"] + GameState.get_boss_time_bonus()
+	_boss_fail_streak = 0
 	log_label.text = "%s: \"%s\"" % [enemy_name, _boss_data["quote"]]
 	_refresh_bars()
 
@@ -293,7 +297,11 @@ func _boss_attack_tick() -> void:
 
 func _on_boss_fail() -> void:
 	Sfx.play_boss_fail()
-	log_label.text = "멘탈이 나갔다... 다시 도전!"
+	_boss_fail_streak += 1
+	if _boss_fail_streak >= BOSS_FAIL_HINT_THRESHOLD:
+		log_label.text = "멘탈이 나갔다... '장비' 탭의 '전체 최대 강화'로 힘을 키워보세요!"
+	else:
+		log_label.text = "멘탈이 나갔다... 다시 도전!"
 	player_hp = GameState.max_hp
 	enemy_hp = enemy_max_hp
 	boss_time_left = _boss_data.get("time_limit", 20.0) + GameState.get_boss_time_bonus()
