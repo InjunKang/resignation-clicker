@@ -128,6 +128,57 @@ func upgrade_equipment(slot: String) -> bool:
 	equipment_changed.emit()
 	return true
 
+## 한 슬롯에 대해 살 수 있는 만큼 한 번에 강화한다. 실제로 오른 레벨 수를 반환.
+func upgrade_equipment_max(slot: String) -> int:
+	var level: int = equipment_levels[slot]
+	var count: int = 0
+	var remaining: float = gold
+	while true:
+		var cost: float = get_equip_cost(slot, level + count)
+		if remaining < cost:
+			break
+		remaining -= cost
+		count += 1
+	if count <= 0:
+		return 0
+	gold = remaining
+	equipment_levels[slot] = level + count
+	if equipment_levels[slot] >= GameData.get_equipment_legendary_level(slot):
+		equipment_ever_maxed = true
+	recalculate_stats()
+	currency_changed.emit()
+	equipment_changed.emit()
+	return count
+
+## 4개 슬롯 전체에 걸쳐 항상 가장 싼 슬롯부터 살 수 있는 만큼 강화한다.
+func upgrade_all_equipment_max() -> int:
+	var total: int = 0
+	var remaining: float = gold
+	var progressed: bool = true
+	while progressed:
+		progressed = false
+		var best_slot: String = ""
+		var best_cost: float = INF
+		for slot in equipment_levels.keys():
+			var cost: float = get_equip_cost(slot, equipment_levels[slot])
+			if cost < best_cost:
+				best_cost = cost
+				best_slot = slot
+		if best_slot != "" and remaining >= best_cost:
+			remaining -= best_cost
+			equipment_levels[best_slot] += 1
+			if equipment_levels[best_slot] >= GameData.get_equipment_legendary_level(best_slot):
+				equipment_ever_maxed = true
+			total += 1
+			progressed = true
+	if total <= 0:
+		return 0
+	gold = remaining
+	recalculate_stats()
+	currency_changed.emit()
+	equipment_changed.emit()
+	return total
+
 # --- 스테이지 진행 ---
 
 func advance_stage() -> void:
