@@ -5,6 +5,8 @@ var panel_host: Control
 var panels: Dictionary = {}
 
 func _ready() -> void:
+	_setup_emoji_fallback()
+
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 	var layout := VBoxContainer.new()
@@ -50,3 +52,11 @@ func _ready() -> void:
 func _on_tab_selected(id: String) -> void:
 	for key in panels.keys():
 		panels[key].visible = (key == id)
+
+## 프로젝트 기본 폰트(한글용 Pretendard)는 이모지 글리프가 없으므로,
+## 흑백 이모지 폰트(Noto Emoji)를 fallback으로 붙여 🔒💰 등이 깨지지 않게 한다.
+func _setup_emoji_fallback() -> void:
+	var base_font := load("res://assets/fonts/Pretendard-Regular.otf") as FontFile
+	var emoji_font := load("res://assets/fonts/NotoEmoji.ttf") as FontFile
+	if base_font and emoji_font and base_font.fallbacks.is_empty():
+		base_font.fallbacks = [emoji_font]
