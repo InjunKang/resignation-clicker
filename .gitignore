@@ -1,0 +1,7 @@
+# Godot 4 editor/build cache
+.godot/
+export/
+*.translation
+
+# Import cache files (regenerated automatically)
+.import/

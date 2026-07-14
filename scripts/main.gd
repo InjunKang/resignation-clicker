@@ -1,0 +1,52 @@
+extends Control
+## 루트 씬: 상단바 + 전투화면 + 탭메뉴 + 하단 패널 호스트를 조립한다.
+
+var panel_host: Control
+var panels: Dictionary = {}
+
+func _ready() -> void:
+	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	var layout := VBoxContainer.new()
+	layout.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(layout)
+
+	var top_bar := TopBar.new()
+	layout.add_child(top_bar)
+
+	var battle_view := BattleView.new()
+	battle_view.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	layout.add_child(battle_view)
+
+	var tab_menu := TabMenu.new()
+	layout.add_child(tab_menu)
+
+	panel_host = Control.new()
+	panel_host.custom_minimum_size = Vector2(0, 160)
+	layout.add_child(panel_host)
+
+	panels["stats"] = StatsPanel.new()
+
+	panels["equipment"] = EquipmentPanel.new()
+
+	panels["team"] = LockedPanel.new()
+	panels["team"].message = "사내 비밀 결사대 - 준비 중입니다"
+
+	panels["invest"] = LockedPanel.new()
+	panels["invest"].message = "실시간 재테크 - 준비 중입니다"
+
+	panels["gacha"] = LockedPanel.new()
+	panels["gacha"].message = "뽑기 - 준비 중입니다"
+
+	for key in panels.keys():
+		var p: Control = panels[key]
+		panel_host.add_child(p)
+		p.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		p.visible = false
+	panels["stats"].visible = true
+
+	tab_menu.tab_selected.connect(_on_tab_selected)
+
+func _on_tab_selected(id: String) -> void:
+	for key in panels.keys():
+		panels[key].visible = (key == id)
