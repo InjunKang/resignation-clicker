@@ -14,9 +14,10 @@ func _ready() -> void:
 	var tabs := [
 		{"id": "stats", "label": "업무"},
 		{"id": "equipment", "label": "장비"},
-		{"id": "team", "label": "결사대🔒"},
-		{"id": "invest", "label": "재테크🔒"},
-		{"id": "gacha", "label": "뽑기🔒"},
+		{"id": "team", "label": "결사대"},
+		{"id": "invest", "label": "재테크"},
+		{"id": "gacha", "label": "뽑기"},
+		{"id": "prestige", "label": "사직서"},
 	]
 	for tab in tabs:
 		var btn := Button.new()

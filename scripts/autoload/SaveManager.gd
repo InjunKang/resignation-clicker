@@ -54,7 +54,8 @@ func _apply_offline_progress() -> void:
 		GameState.last_save_unix = now
 		return
 	var rate: float = GameState.get_estimated_gold_per_second()
-	var reward: float = rate * elapsed * OFFLINE_EFFICIENCY
+	var reward: float = rate * elapsed * OFFLINE_EFFICIENCY * GameState.get_offline_bonus_multiplier()
 	if reward > 0.0:
-		GameState.add_gold(reward)
+		# rate already includes the drink(골드 배율) bonus, so add it raw here to avoid double-counting.
+		GameState.add_gold_raw(reward)
 	GameState.last_save_unix = now

@@ -24,21 +24,15 @@ func _ready() -> void:
 	layout.add_child(tab_menu)
 
 	panel_host = Control.new()
-	panel_host.custom_minimum_size = Vector2(0, 160)
+	panel_host.custom_minimum_size = Vector2(0, 200)
 	layout.add_child(panel_host)
 
 	panels["stats"] = StatsPanel.new()
-
 	panels["equipment"] = EquipmentPanel.new()
-
-	panels["team"] = LockedPanel.new()
-	panels["team"].message = "사내 비밀 결사대 - 준비 중입니다"
-
-	panels["invest"] = LockedPanel.new()
-	panels["invest"].message = "실시간 재테크 - 준비 중입니다"
-
-	panels["gacha"] = LockedPanel.new()
-	panels["gacha"].message = "뽑기 - 준비 중입니다"
+	panels["team"] = TeamPanel.new()
+	panels["invest"] = InvestPanel.new()
+	panels["gacha"] = GachaPanel.new()
+	panels["prestige"] = PrestigePanel.new()
 
 	for key in panels.keys():
 		var p: Control = panels[key]

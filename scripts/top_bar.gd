@@ -43,8 +43,10 @@ func _ready() -> void:
 	_refresh()
 
 func _refresh() -> void:
+	var company_index: int = GameData.get_company_index(GameState.stage_index)
 	var sub_stage: int = (GameState.stage_index % GameData.STAGE_COUNT) + 1
-	stage_label.text = "1-%d %s" % [sub_stage, GameData.STAGE_NAME]
+	var company_name: String = GameData.COMPANIES[company_index]["name"]
+	stage_label.text = "%d-%d %s" % [company_index + 1, sub_stage, company_name]
 	gold_label.text = "💰 %s" % Fmt.short(GameState.gold)
 	stress_label.text = "😤 %s" % Fmt.short(GameState.stress)
 	diamond_label.text = "💳 %s" % Fmt.short(GameState.diamond)

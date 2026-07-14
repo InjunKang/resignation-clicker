@@ -41,6 +41,6 @@ func _refresh() -> void:
 			info["button"].text = "MAX"
 			info["button"].disabled = true
 		else:
-			var cost: float = GameData.get_equipment_upgrade_cost(slot, level)
+			var cost: float = GameState.get_equip_cost(slot, level)
 			info["button"].text = "업그레이드 (💰%s)" % Fmt.short(cost)
 			info["button"].disabled = GameState.gold < cost
