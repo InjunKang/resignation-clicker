@@ -57,6 +57,22 @@ static func build() -> Theme:
 	theme.set_color("font_focus_color", "Button", Color.WHITE)
 	theme.set_color("font_disabled_color", "Button", Color("#8A8474"))
 
+	# --- CheckButton (자동 발동 토글 — Button과 별도 테마 타입이라 켜짐 상태에서
+	# 배경/글자색이 엔진 기본값(투명/저대비)으로 빠져 안 보이던 버그가 있었음) ---
+	theme.set_stylebox("normal", "CheckButton", btn_normal)
+	theme.set_stylebox("hover", "CheckButton", btn_hover)
+	theme.set_stylebox("pressed", "CheckButton", btn_pressed)
+	theme.set_stylebox("hover_pressed", "CheckButton", btn_pressed)
+	theme.set_stylebox("disabled", "CheckButton", btn_disabled)
+	theme.set_font("font", "CheckButton", bold_font)
+	theme.set_font_size("font_size", "CheckButton", BUTTON_FONT_SIZE)
+	theme.set_color("font_color", "CheckButton", Color.WHITE)
+	theme.set_color("font_hover_color", "CheckButton", Color.WHITE)
+	theme.set_color("font_pressed_color", "CheckButton", Color.WHITE)
+	theme.set_color("font_hover_pressed_color", "CheckButton", Color.WHITE)
+	theme.set_color("font_focus_color", "CheckButton", Color.WHITE)
+	theme.set_color("font_disabled_color", "CheckButton", Color("#8A8474"))
+
 	# --- Panel / PanelContainer (card containers, 서로 다른 테마 타입이라 둘 다 설정) ---
 	theme.set_stylebox("panel", "Panel", _flat_style(COLOR_PANEL, 18, 2))
 	theme.set_stylebox("panel", "PanelContainer", _flat_style(COLOR_PANEL, 18, 2))

@@ -29,7 +29,6 @@ func _ready() -> void:
 	top_card.add_child(top_bar)
 
 	var battle_card := PanelContainer.new()
-	battle_card.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	layout.add_child(battle_card)
 	var battle_view := BattleView.new()
 	battle_card.add_child(battle_view)
@@ -39,6 +38,7 @@ func _ready() -> void:
 
 	var panel_card := PanelContainer.new()
 	panel_card.custom_minimum_size = Vector2(0, 260)
+	panel_card.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	layout.add_child(panel_card)
 	panel_host = Control.new()
 	panel_card.add_child(panel_host)
