@@ -35,6 +35,7 @@ var boss_timer_label: Label
 var log_label: Label
 var auto_toggle: CheckButton
 var battle_area: Control
+var battle_hbox: HBoxContainer
 var enemy_box: VBoxContainer
 var player_box: VBoxContainer
 var enemy_portrait_stack: Control
@@ -57,10 +58,11 @@ func _build_ui() -> void:
 	battle_area.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root_vbox.add_child(battle_area)
 
-	var hbox := HBoxContainer.new()
-	hbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	battle_area.add_child(hbox)
+	battle_hbox = HBoxContainer.new()
+	battle_hbox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	battle_hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	battle_area.add_child(battle_hbox)
+	var hbox := battle_hbox
 
 	enemy_box = VBoxContainer.new()
 	enemy_box.custom_minimum_size = Vector2(280, 0)
@@ -112,11 +114,15 @@ func _build_ui() -> void:
 	player_box.add_theme_constant_override("separation", 6)
 	hbox.add_child(player_box)
 
+	var player_portrait_wrap := Control.new()
+	player_portrait_wrap.custom_minimum_size = Vector2(0, 128)
+	player_box.add_child(player_portrait_wrap)
+
 	player_portrait = TextureRect.new()
 	player_portrait.texture = load("res://assets/art/player.svg")
-	player_portrait.custom_minimum_size = Vector2(0, 128)
 	player_portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	player_box.add_child(player_portrait)
+	player_portrait.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	player_portrait_wrap.add_child(player_portrait)
 
 	var player_name_label := Label.new()
 	player_name_label.text = "김대리"
@@ -204,7 +210,8 @@ func _spawn_mob() -> void:
 	enemy_icon = mob["icon"]
 	enemy_max_hp = GameData.get_mob_hp(GameState.stage_index)
 	enemy_hp = enemy_max_hp
-	_refresh_bars()
+	_snap_bars()
+	_pop_in(enemy_icon_label)
 
 func _spawn_boss() -> void:
 	is_boss = true
@@ -222,11 +229,23 @@ func _spawn_boss() -> void:
 	enemy_hp = enemy_max_hp
 	boss_time_left = _boss_data["time_limit"] + GameState.get_boss_time_bonus()
 	log_label.text = "%s: \"%s\"" % [enemy_name, _boss_data["quote"]]
-	_refresh_bars()
+	_snap_bars()
+	_pop_in(boss_portrait)
+	_shake(10.0)
 
 func _refresh_bars() -> void:
-	enemy_icon_label.text = enemy_icon
-	enemy_name_label.text = enemy_name
+	if enemy_icon_label.text != enemy_icon:
+		enemy_icon_label.text = enemy_icon
+	if enemy_name_label.text != enemy_name:
+		enemy_name_label.text = enemy_name
+	enemy_hp_bar.max_value = enemy_max_hp
+	enemy_hp_bar.value = lerp(enemy_hp_bar.value, enemy_hp, 0.3)
+	player_hp_bar.max_value = GameState.max_hp
+	player_hp_bar.value = lerp(player_hp_bar.value, player_hp, 0.3)
+
+## 새 적/플레이어 상태로 전환될 때 HP바가 이전 값에서 스르륵 흘러오지 않고
+## 즉시 꽉 찬 상태로 보이도록 강제 스냅한다.
+func _snap_bars() -> void:
 	enemy_hp_bar.max_value = enemy_max_hp
 	enemy_hp_bar.value = enemy_hp
 	player_hp_bar.max_value = GameState.max_hp
@@ -268,6 +287,31 @@ func _flash(control: Control) -> void:
 	tween.tween_property(control, "modulate", Color(1.6, 1.6, 1.6), 0.05)
 	tween.tween_property(control, "modulate", Color(1, 1, 1), 0.15)
 
+## 공격 모션: 지정한 방향(왼쪽=적, 오른쪽=플레이어)으로 살짝 튀어나갔다가 돌아온다.
+func _lunge(portrait: Control, direction: float, distance: float = 22.0) -> void:
+	var start_x: float = portrait.position.x
+	var tween := create_tween()
+	tween.tween_property(portrait, "position:x", start_x + direction * distance, 0.08) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(portrait, "position:x", start_x, 0.14) \
+		.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+
+## 화면 흔들림: 전투 영역 전체를 짧게 흔든다 (피격/보스 등장 등 임팩트 연출).
+func _shake(strength: float = 6.0) -> void:
+	var tween := create_tween()
+	for i in 4:
+		var offset := Vector2(randf_range(-strength, strength), randf_range(-strength, strength))
+		tween.tween_property(battle_hbox, "position", offset, 0.035)
+	tween.tween_property(battle_hbox, "position", Vector2.ZERO, 0.035)
+
+## 등장 연출: 작은 크기에서 팝업하듯 원래 크기로 튀어 오른다.
+func _pop_in(portrait: Control) -> void:
+	portrait.pivot_offset = portrait.size * 0.5
+	portrait.scale = Vector2(0.3, 0.3)
+	var tween := create_tween()
+	tween.tween_property(portrait, "scale", Vector2.ONE, 0.35) \
+		.set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
 # --- 전투 ---
 
 func _gold_multiplier() -> float:
@@ -287,6 +331,8 @@ func _player_attack_tick() -> void:
 	enemy_hp -= dmg
 	_spawn_floating_number(enemy_box, "-%s" % Fmt.short(dmg), Color(1.0, 0.35, 0.35) if crit else Color(1, 1, 1))
 	_flash(enemy_portrait_stack)
+	_lunge(player_portrait, -1.0)
+	_shake(10.0 if crit else 4.0)
 	_check_enemy_death()
 
 func _check_enemy_death() -> void:
@@ -331,6 +377,8 @@ func _boss_attack_tick() -> void:
 	player_hp = max(0.0, player_hp - dmg)
 	_spawn_floating_number(player_box, "-%s" % Fmt.short(dmg), Color(1.0, 0.6, 0.2))
 	_flash(player_portrait)
+	_lunge(boss_portrait, 1.0)
+	_shake(6.0)
 
 func _on_boss_fail() -> void:
 	Sfx.play_boss_fail()
@@ -395,6 +443,7 @@ func _cast_skill(id: String) -> void:
 			enemy_hp -= dmg
 			_spawn_floating_number(enemy_box, "-%s" % Fmt.short(dmg), Color(1.0, 0.9, 0.3))
 			_flash(enemy_portrait_stack)
+			_shake(8.0)
 			log_label.text = "네 탓이오! %s 탓이야!" % enemy_name
 			_check_enemy_death()
 		"chopper":
@@ -402,6 +451,7 @@ func _cast_skill(id: String) -> void:
 			enemy_hp -= dmg
 			_spawn_floating_number(enemy_box, "-%s" % Fmt.short(dmg), Color(1.0, 0.9, 0.3))
 			_flash(enemy_portrait_stack)
+			_shake(14.0)
 			log_label.text = "전무님이 헬기 타고 등장! 대가리 박아!"
 			_check_enemy_death()
 		# "nep", "coffee"는 지속시간(active) 동안의 상태 플래그로만 동작 (즉발 효과 없음)
