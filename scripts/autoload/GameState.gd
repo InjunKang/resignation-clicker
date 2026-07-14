@@ -6,6 +6,7 @@ signal stats_changed
 signal equipment_changed
 signal stage_changed
 signal stock_changed
+signal prestiged
 
 var gold: float = 0.0
 var stress: float = 0.0
@@ -350,6 +351,7 @@ func do_prestige() -> int:
 	stage_changed.emit()
 	equipment_changed.emit()
 	stock_changed.emit()
+	prestiged.emit()
 	return reward
 
 func buy_prestige_upgrade(id: String) -> bool:

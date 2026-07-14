@@ -22,32 +22,99 @@ const PASSIVE_INCOME_RATIO := 0.3
 const COMPANIES := [
 	{
 		"name": "(주)까라면까 상사",
+		"intro": "신입사원 김대리, (주)까라면까 상사에 첫 출근!",
 		"mobs": [
 			{"id": "copier_jam", "name": "복사기 잼", "icon": "🖨️"},
 			{"id": "coffee_thief", "name": "탕비실 커피 믹스 도둑", "icon": "☕"},
 			{"id": "hwp_error", "name": "한글 파일 에러", "icon": "📄"},
 		],
-		"boss": {"id": "boss_1", "name": "낙하산 박낙하 대리", "icon": "🪂", "quote": "우리 아버지가 누군지 알아?", "time_limit": 20.0},
+		"boss": {
+			"id": "boss_1", "name": "낙하산 박낙하 대리", "icon": "🪂",
+			"quote": "우리 아버지가 누군지 알아?",
+			"taunts": ["이 정도는 인맥으로도 해결되는데 말이지", "내가 누군지 알면 그런 표정 못 지을 텐데?", "결재는 내 기분에 달려있어"],
+			"defeat_line": "이, 이럴 리가... 아빠한테 이를 거야!",
+			"time_limit": 20.0,
+		},
 	},
 	{
 		"name": "꼰대 플래닛",
+		"intro": "이직 성공! 여긴 꼰대 플래닛... 소문이 사실이었다",
 		"mobs": [
 			{"id": "weekend_hike", "name": "주말 등산 강요", "icon": "⛰️"},
 			{"id": "sudden_dinner", "name": "갑작스러운 회식", "icon": "🍻"},
 			{"id": "messenger_jail", "name": "메신저 감옥", "icon": "📱"},
 		],
-		"boss": {"id": "boss_2", "name": "라떼는 과장", "icon": "☕", "quote": "나 때는 말이야, 야근이 기본이었어!", "time_limit": 22.0},
+		"boss": {
+			"id": "boss_2", "name": "라떼는 과장", "icon": "☕",
+			"quote": "나 때는 말이야, 야근이 기본이었어!",
+			"taunts": ["우리 때는 주 7일 출근도 미덕이었어", "요즘 애들은 근성이 없어, 쯧쯧", "이 커피 맛도 예전 같지가 않아..."],
+			"defeat_line": "라떼는... 라떼는 말이야 흑흑",
+			"time_limit": 22.0,
+		},
 	},
 	{
 		"name": "네카라쿠배당토",
+		"intro": "드디어 네카라쿠배당토 입성! 그런데 왜 다들 영어를 섞어 쓰지?",
 		"mobs": [
 			{"id": "konglish_bot", "name": "영어 섞어 쓰기 봇", "icon": "🤖"},
 			{"id": "tf_meeting", "name": "의미 없는 TF 팀 미팅", "icon": "📅"},
 			{"id": "weekly_report", "name": "주간 보고서", "icon": "📊"},
 		],
-		"boss": {"id": "boss_3", "name": "트렌디 최부장", "icon": "🕶️", "quote": "As ASAP하게, 린(Lean)하게 얼라인(Align)해봐.", "time_limit": 25.0},
+		"boss": {
+			"id": "boss_3", "name": "트렌디 최부장", "icon": "🕶️",
+			"quote": "As ASAP하게, 린(Lean)하게 얼라인(Align)해봐.",
+			"taunts": ["이거 완전 러프하게 씽크해봐", "애자일하게 피봇 좀 하지?", "KPI 얼라인 안 되면 곤란한데"],
+			"defeat_line": "이거 완전... 언얼라인드한데...?",
+			"time_limit": 25.0,
+		},
 	},
 ]
+
+const IDLE_FLAVOR_LINES := [
+	"엑셀 수식이 또 깨졌다...",
+	"상사가 지나갈 때마다 모니터 창을 바꾼다",
+	"커피가 벌써 세 잔째다",
+	"화장실에서 5분째 안 나온다",
+	"메신저로 '넵'만 스무 번째 보내는 중",
+	"점심 뭐 먹지 고민하다 오후가 다 갔다",
+	"복붙 신공으로 보고서를 완성했다",
+	"PPT 폰트를 정하는 데만 30분째",
+	"퇴근 5분 전, 팀장이 부른다...",
+	"탕비실에 과자가 떨어졌다는 소식에 절망한다",
+	"회의가 회의를 부른다",
+	"출근했지만 정신은 아직 이불 속",
+	"오늘도 야근 확정인 것 같은 불길한 예감",
+	"메일 제목에 '긴급'이 하나 더 늘었다",
+	"잠깐 딴짓하다 상사와 눈이 마주쳤다",
+	"책상 정리하다 3년 전 영수증을 발견했다",
+	"인쇄기 앞에서 순서를 기다리는 중",
+	"오탈자 하나 고치다 문서를 통째로 날렸다",
+]
+
+const BOSS_DEFEAT_LINES := [
+	"회심의 카운터! 사이다가 따로 없다",
+	"오늘만큼은 을이 갑을 이겼다",
+	"월급루팡의 반격이 통했다!",
+	"정시 퇴근이 눈앞에 보인다",
+	"이 맛에 회사 다닌다(아님)",
+]
+
+const PRESTIGE_LINES := [
+	"그동안 고생 많았다, 나 자신",
+	"새 회사에서는 부장님이 조금 덜 밉기를",
+	"퇴사는 아름다워",
+	"인수인계? 그런 거 없다",
+	"마지막으로 상사 얼굴에 사직서 스매시!",
+]
+
+func get_random_idle_flavor() -> String:
+	return IDLE_FLAVOR_LINES[randi() % IDLE_FLAVOR_LINES.size()]
+
+func get_random_boss_defeat_line() -> String:
+	return BOSS_DEFEAT_LINES[randi() % BOSS_DEFEAT_LINES.size()]
+
+func get_random_prestige_line() -> String:
+	return PRESTIGE_LINES[randi() % PRESTIGE_LINES.size()]
 
 func get_company_index(stage_index: int) -> int:
 	return mini(int(stage_index / float(STAGE_COUNT)), COMPANIES.size() - 1)

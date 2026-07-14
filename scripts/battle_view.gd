@@ -14,8 +14,12 @@ var boss_time_left: float = 0.0
 var _boss_data: Dictionary = {}
 var _boss_fail_streak: int = 0
 var _boss_retry_mobs_remaining: int = 0
+var _flavor_timer: float = 0.0
+var _last_company_index: int = -1
 
 const BOSS_FAIL_HINT_THRESHOLD := 3
+const IDLE_FLAVOR_INTERVAL := 6.0
+const BOSS_TAUNT_INTERVAL := 7.0
 
 var player_hp: float = 0.0
 
@@ -46,6 +50,7 @@ func _ready() -> void:
 		_skills.append({"data": s, "cd": 0.0, "active": 0.0, "button": null})
 	_build_ui()
 	GameState.stats_changed.connect(_on_stats_changed)
+	GameState.prestiged.connect(_on_prestiged)
 	player_hp = GameState.max_hp
 	_spawn_next_enemy()
 
@@ -146,6 +151,8 @@ func _build_ui() -> void:
 	log_label = Label.new()
 	log_label.text = "자동으로 업무를 처리하는 중..."
 	log_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	log_label.autowrap_mode = TextServer.AUTOWRAP_WORD
+	log_label.custom_minimum_size = Vector2(0, 30)
 	root_vbox.add_child(log_label)
 
 	var skill_row := HBoxContainer.new()
@@ -186,9 +193,24 @@ func _process(delta: float) -> void:
 		if boss_time_left <= 0.0 or player_hp <= 0.0:
 			_on_boss_fail()
 
+	_update_flavor(delta)
 	_update_skills(delta)
 	_refresh_bars()
 	_refresh_skill_bar()
+
+## 잡담 대사 로테이션: 몹 페이즈에서는 사무실 개그를, 보스전에서는 보스 도발을 주기적으로 보여준다.
+func _update_flavor(delta: float) -> void:
+	_flavor_timer += delta
+	var interval: float = BOSS_TAUNT_INTERVAL if is_boss else IDLE_FLAVOR_INTERVAL
+	if _flavor_timer < interval:
+		return
+	_flavor_timer = 0.0
+	if is_boss:
+		var taunts: Array = _boss_data.get("taunts", [])
+		if not taunts.is_empty():
+			log_label.text = "%s: \"%s\"" % [enemy_name, taunts[randi() % taunts.size()]]
+	else:
+		log_label.text = GameData.get_random_idle_flavor()
 
 func _spawn_next_enemy() -> void:
 	if _boss_retry_mobs_remaining > 0:
@@ -203,7 +225,12 @@ func _spawn_mob() -> void:
 	boss_timer_label.visible = false
 	enemy_icon_label.visible = true
 	boss_portrait.visible = false
+	var company_index: int = GameData.get_company_index(GameState.stage_index)
 	var company: Dictionary = GameData.get_company(GameState.stage_index)
+	if company_index != _last_company_index:
+		_last_company_index = company_index
+		log_label.text = company.get("intro", "")
+		_flavor_timer = 0.0
 	var mobs: Array = company["mobs"]
 	var mob: Dictionary = mobs[GameState.mobs_defeated_in_stage % mobs.size()]
 	enemy_name = mob["name"]
@@ -219,6 +246,7 @@ func _spawn_boss() -> void:
 	enemy_icon_label.visible = false
 	boss_portrait.visible = true
 	_boss_attack_timer = 0.0
+	_flavor_timer = 0.0
 	var company_index: int = GameData.get_company_index(GameState.stage_index)
 	var company: Dictionary = GameData.get_company(GameState.stage_index)
 	_boss_data = company["boss"]
@@ -357,11 +385,12 @@ func _on_boss_defeated() -> void:
 	GameState.add_stress(GameData.get_boss_stress_reward(GameState.stage_index))
 	GameState.register_boss_kill()
 	_boss_fail_streak = 0
+	var defeat_quote: String = _boss_data.get("defeat_line", "...")
 	if GameState.register_boss_first_clear(company_index):
 		GameState.add_diamond(GameData.BOSS_FIRST_CLEAR_DIAMOND_REWARD)
-		log_label.text = "%s 격파! 첫 클리어 보너스 법인카드 +%d" % [_boss_data.get("name", ""), int(GameData.BOSS_FIRST_CLEAR_DIAMOND_REWARD)]
+		log_label.text = "%s: \"%s\" (첫 클리어! 법인카드 +%d)" % [_boss_data.get("name", ""), defeat_quote, int(GameData.BOSS_FIRST_CLEAR_DIAMOND_REWARD)]
 	else:
-		log_label.text = "%s 격파! 다음 스테이지로." % _boss_data.get("name", "")
+		log_label.text = "%s: \"%s\" — %s" % [_boss_data.get("name", ""), defeat_quote, GameData.get_random_boss_defeat_line()]
 	Sfx.play_boss_clear()
 	GameState.advance_stage()
 	player_hp = GameState.max_hp
@@ -401,6 +430,15 @@ func _on_stats_changed() -> void:
 	player_hp = min(player_hp, GameState.max_hp)
 	if player_hp <= 0.0:
 		player_hp = GameState.max_hp
+
+func _on_prestiged() -> void:
+	_boss_retry_mobs_remaining = 0
+	_boss_fail_streak = 0
+	player_hp = GameState.max_hp
+	_last_company_index = 0 # 신입사원 인트로 대사 대신 사직서 대사를 그대로 유지시킴
+	_spawn_next_enemy()
+	log_label.text = GameData.get_random_prestige_line()
+	_flavor_timer = 0.0
 
 # --- 액티브 스킬 (오토캐스트) ---
 
