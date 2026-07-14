@@ -47,6 +47,7 @@ var equipment_ever_maxed: bool = false
 var achievements_claimed: Dictionary = {}
 
 var last_save_unix: int = 0
+var _passive_income_timer: float = 0.0
 
 # 파생 스탯 (recalculate_stats에서 갱신)
 var atk: float = 0.0
@@ -64,6 +65,11 @@ func _process(delta: float) -> void:
 	if _stock_tick_timer >= GameData.STOCK_TICK_INTERVAL:
 		_stock_tick_timer -= GameData.STOCK_TICK_INTERVAL
 		_tick_stock_market()
+
+	_passive_income_timer += delta
+	if _passive_income_timer >= 1.0:
+		_passive_income_timer -= 1.0
+		add_gold(get_estimated_gold_per_second() * GameData.PASSIVE_INCOME_RATIO)
 
 func recalculate_stats() -> void:
 	var kb_bonus: float = GameData.get_equipment_stat_bonus("keyboard", equipment_levels["keyboard"])
@@ -112,14 +118,11 @@ func get_equip_cost(slot: String, level: int) -> float:
 
 func upgrade_equipment(slot: String) -> bool:
 	var level: int = equipment_levels[slot]
-	var max_level: int = GameData.get_equipment_max_level(slot)
-	if level >= max_level:
-		return false
 	var cost: float = get_equip_cost(slot, level)
 	if not spend_gold(cost):
 		return false
 	equipment_levels[slot] = level + 1
-	if equipment_levels[slot] >= max_level:
+	if equipment_levels[slot] >= GameData.get_equipment_legendary_level(slot):
 		equipment_ever_maxed = true
 	recalculate_stats()
 	equipment_changed.emit()
@@ -257,11 +260,9 @@ func do_gacha() -> Dictionary:
 		levels = randi_range(GameData.GACHA_MIN_LEVELS, GameData.GACHA_MAX_LEVELS)
 	gacha_pity = 0 if levels >= GameData.GACHA_MAX_LEVELS else gacha_pity + 1
 
-	var max_level: int = GameData.get_equipment_max_level(slot)
-	var new_level: int = mini(equipment_levels[slot] + levels, max_level)
-	var actual_gain: int = new_level - equipment_levels[slot]
+	var new_level: int = equipment_levels[slot] + levels
 	equipment_levels[slot] = new_level
-	if new_level >= max_level:
+	if new_level >= GameData.get_equipment_legendary_level(slot):
 		equipment_ever_maxed = true
 	recalculate_stats()
 	currency_changed.emit()
@@ -269,7 +270,7 @@ func do_gacha() -> Dictionary:
 	return {
 		"success": true,
 		"slot": slot,
-		"levels": actual_gain,
+		"levels": levels,
 		"rarity": GameData.get_gacha_rarity_name(levels),
 	}
 

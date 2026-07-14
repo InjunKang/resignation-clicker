@@ -34,13 +34,8 @@ func _refresh() -> void:
 		var def: Dictionary = GameData.EQUIPMENT[slot]
 		var tier_index: int = GameData.get_equipment_tier_index(level)
 		var tier: Dictionary = def["tiers"][tier_index]
-		var max_level: int = GameData.get_equipment_max_level(slot)
 		var info: Dictionary = rows[slot]
 		info["name_label"].text = "%s %s %s Lv.%d" % [tier["icon"], def["label"], tier["name"], level]
-		if level >= max_level:
-			info["button"].text = "MAX"
-			info["button"].disabled = true
-		else:
-			var cost: float = GameState.get_equip_cost(slot, level)
-			info["button"].text = "업그레이드 (💰%s)" % Fmt.short(cost)
-			info["button"].disabled = GameState.gold < cost
+		var cost: float = GameState.get_equip_cost(slot, level)
+		info["button"].text = "업그레이드 (💰%s)" % Fmt.short(cost)
+		info["button"].disabled = GameState.gold < cost

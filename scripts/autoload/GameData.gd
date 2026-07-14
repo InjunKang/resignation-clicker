@@ -10,6 +10,11 @@ const BASE_ATK := 5.0
 const BASE_HP := 50.0
 const BASE_DEF := 0.0
 
+## 전투 상태와 무관하게 매초 들어오는 "월급 자동 생산" 배율.
+## 몹 페이즈 처치 보상 대비 비율 — 보스에게 막혀 있는 동안에도 골드가 완전히
+## 끊기지 않게 해서(원 기획서의 "초당 자동 생산" 반영) 소프트락을 방지한다.
+const PASSIVE_INCOME_RATIO := 0.3
+
 # --- 회사(스테이지) ---
 
 const COMPANIES := [
@@ -120,11 +125,18 @@ func get_equipment_tier_index(level: int) -> int:
 func get_equipment_stat_bonus(slot: String, level: int) -> float:
 	var tier_index: int = get_equipment_tier_index(level)
 	var tier_base: float = EQUIPMENT[slot]["tiers"][tier_index]["base"]
-	var level_in_tier: int = level % LEVELS_PER_TIER
-	return tier_base * (1.0 + level_in_tier * 0.08)
+	# 마지막 티어([전설])에 진입한 뒤에는 10레벨마다 순환시키지 않고 무제한으로 계속 성장시킨다.
+	# (레벨 캡이 있으면 보스 HP의 무한 성장을 절대 못 따라잡는 소프트락이 생김 — 시뮬레이션으로 확인)
+	var progress: int
+	if tier_index < EQUIPMENT[slot]["tiers"].size() - 1:
+		progress = level % LEVELS_PER_TIER
+	else:
+		progress = level - LEVELS_PER_TIER * (EQUIPMENT[slot]["tiers"].size() - 1)
+	return tier_base * (1.0 + progress * 0.08)
 
-func get_equipment_max_level(slot: String) -> int:
-	return LEVELS_PER_TIER * EQUIPMENT[slot]["tiers"].size() - 1
+## 이 레벨부터 마지막 티어([전설])에 진입한다 (더 이상 등급명은 바뀌지 않지만 강화는 무제한 계속 가능)
+func get_equipment_legendary_level(slot: String) -> int:
+	return LEVELS_PER_TIER * (EQUIPMENT[slot]["tiers"].size() - 1)
 
 # --- 사내 비밀 결사대 (동료) ---
 # unlock_stage: 이 값 이상 stage_index에 도달하면 자동 해금(글로벌 0-based 스테이지 인덱스)
@@ -195,7 +207,7 @@ const ACHIEVEMENTS := [
 	{"id": "busywork_1000", "name": "잡무 마스터", "desc": "잡무 1,000회 처리", "type": "mob_kills", "value": 1000, "reward": 20},
 	{"id": "first_boss", "name": "첫 승리", "desc": "상사 1명 처치", "type": "boss_kills", "value": 1, "reward": 10},
 	{"id": "boss_hunter", "name": "보스 사냥꾼", "desc": "상사 10명 처치", "type": "boss_kills", "value": 10, "reward": 20},
-	{"id": "gear_maxed", "name": "장비 마스터", "desc": "장비 1종을 최고 등급까지 강화", "type": "equipment_maxed", "value": 1, "reward": 15},
+	{"id": "gear_maxed", "name": "장비 마스터", "desc": "장비 1종을 [전설] 등급까지 강화", "type": "equipment_maxed", "value": 1, "reward": 15},
 	{"id": "first_quit", "name": "이직의 정석", "desc": "사직서 1회 제출", "type": "prestige_count", "value": 1, "reward": 20},
 	{"id": "job_hopper", "name": "N수생", "desc": "사직서 5회 제출", "type": "prestige_count", "value": 5, "reward": 50},
 ]
