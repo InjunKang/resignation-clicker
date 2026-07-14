@@ -191,6 +191,16 @@ func get_equipment_upgrade_cost(_slot: String, level: int) -> float:
 func get_equipment_tier_index(level: int) -> int:
 	return mini(int(level / float(LEVELS_PER_TIER)), 3)
 
+const EQUIPMENT_TIER_COLORS := [
+	Color("#8A8474"), # 일반
+	Color("#2EC4B6"), # 희귀
+	Color("#FF6B35"), # 고급
+	Color("#FFD23F"), # 전설
+]
+
+func get_equipment_tier_color(level: int) -> Color:
+	return EQUIPMENT_TIER_COLORS[get_equipment_tier_index(level)]
+
 func get_equipment_stat_bonus(slot: String, level: int) -> float:
 	var tier_index: int = get_equipment_tier_index(level)
 	var tier_base: float = EQUIPMENT[slot]["tiers"][tier_index]["base"]
@@ -257,6 +267,23 @@ func get_gacha_rarity_name(levels: int) -> String:
 
 func get_gacha_rarity_color(levels: int) -> Color:
 	return GACHA_RARITY_COLORS.get(levels, Color.WHITE)
+
+## 뽑기로 얻는 아이템은 장비 레벨에 합쳐지지 않고, 별도 아이템으로 보유하며
+## 해당 스탯에 곱연산 보너스(%)를 추가로 제공한다.
+const GACHA_ITEM_BONUS := {1: 0.05, 2: 0.10, 3: 0.20}
+
+func get_gacha_item_bonus(rarity_level: int) -> float:
+	return GACHA_ITEM_BONUS.get(rarity_level, 0.05)
+
+const GACHA_STAT_NAMES := {
+	"keyboard": "공격력",
+	"chair": "체력",
+	"mouse": "치명타 확률",
+	"drink": "골드 획득량",
+}
+
+func get_gacha_stat_name(slot: String) -> String:
+	return GACHA_STAT_NAMES.get(slot, slot)
 
 # --- 사직서 던지기 (프레스티지) ---
 

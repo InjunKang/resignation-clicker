@@ -69,6 +69,7 @@ func _refresh() -> void:
 		var tier: Dictionary = def["tiers"][tier_index]
 		var info: Dictionary = rows[slot]
 		info["name_label"].text = "%s %s %s Lv.%d" % [tier["icon"], def["label"], tier["name"], level]
+		info["name_label"].add_theme_color_override("font_color", GameData.get_equipment_tier_color(level))
 		var cost: float = GameState.get_equip_cost(slot, level)
 		var affordable: bool = GameState.gold >= cost
 		any_affordable = any_affordable or affordable

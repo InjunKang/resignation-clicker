@@ -26,9 +26,15 @@ var equipment_levels: Dictionary = {
 var boss_first_clear: Dictionary = {}
 
 var gacha_pity: int = 0
+# 뽑기로 획득한 아이템 목록 — 장비 레벨과는 별개로 보유하며 각자 스탯 보너스(%)를 더한다.
+# 각 항목: {"id": int, "slot": String, "rarity": int(1~3), "bonus": float}
+var gacha_items: Array = []
+var _next_gacha_item_id: int = 1
 
 # 재테크(가짜 주식): id -> 보유 수량(주)
 var stock_shares: Dictionary = {}
+# id -> 현재 보유분에 투입한 총 매수 금액(손익률 계산용)
+var stock_cost_basis: Dictionary = {}
 # id -> 현재가 (세션마다 기준가로 재설정, 저장하지 않음)
 var stock_prices: Dictionary = {}
 # id -> 최근 가격 이력(차트용, 세션마다 재설정, 저장하지 않음)
@@ -78,13 +84,25 @@ func recalculate_stats() -> void:
 	var mouse_bonus: float = GameData.get_equipment_stat_bonus("mouse", equipment_levels["mouse"])
 	var drink_bonus: float = GameData.get_equipment_stat_bonus("drink", equipment_levels["drink"])
 
-	atk = GameData.BASE_ATK * kb_bonus * get_atk_multiplier_bonus()
-	max_hp = GameData.BASE_HP * chair_bonus
-	crit_chance = clamp(0.05 * mouse_bonus, 0.0, 0.75)
-	gold_rate_mult = drink_bonus
+	atk = GameData.BASE_ATK * kb_bonus * get_gacha_bonus_multiplier("keyboard") * get_atk_multiplier_bonus()
+	max_hp = GameData.BASE_HP * chair_bonus * get_gacha_bonus_multiplier("chair")
+	crit_chance = clamp(0.05 * mouse_bonus * get_gacha_bonus_multiplier("mouse"), 0.0, 0.75)
+	gold_rate_mult = drink_bonus * get_gacha_bonus_multiplier("drink")
 	def = GameData.BASE_DEF + equipment_levels["chair"] * 0.2
 
 	stats_changed.emit()
+
+## 보유한 뽑기 아이템 중 해당 슬롯(스탯)에 해당하는 것들의 보너스를 합산한 배율.
+## 장비 레벨과는 완전히 별개의 곱연산 레이어로 적용된다.
+func get_gacha_bonus_multiplier(slot: String) -> float:
+	var total: float = 0.0
+	for item in gacha_items:
+		if item["slot"] == slot:
+			total += item["bonus"]
+	return 1.0 + total
+
+func get_gacha_bonus_percent(slot: String) -> float:
+	return (get_gacha_bonus_multiplier(slot) - 1.0) * 100.0
 
 # --- 재화 ---
 
@@ -263,6 +281,8 @@ func _init_stock_prices() -> void:
 		stock_price_history[id] = [s["base_price"]]
 		if not stock_shares.has(id):
 			stock_shares[id] = 0.0
+		if not stock_cost_basis.has(id):
+			stock_cost_basis[id] = 0.0
 
 func _tick_stock_market() -> void:
 	for s in GameData.STOCKS:
@@ -278,11 +298,15 @@ func _tick_stock_market() -> void:
 			history.pop_front()
 	stock_changed.emit()
 
-func buy_stock(id: String, amount: float) -> bool:
-	if amount <= 0.0 or not spend_gold(amount):
+## amount는 골드 금액이 아니라 "현재 골드 대비 비율"(0~1)로 받는다 — 매번 눌러도
+## 항상 그 시점 골드의 정해진 비율만큼만 들어가서 예측 가능하게 만든다.
+func buy_stock_fraction(id: String, fraction: float) -> bool:
+	var amount: float = gold * clamp(fraction, 0.0, 1.0)
+	if amount < 1.0 or not spend_gold(amount):
 		return false
 	var price: float = stock_prices.get(id, 1.0)
 	stock_shares[id] = stock_shares.get(id, 0.0) + amount / max(price, 0.0001)
+	stock_cost_basis[id] = stock_cost_basis.get(id, 0.0) + amount
 	stock_changed.emit()
 	return true
 
@@ -292,9 +316,19 @@ func sell_stock(id: String) -> float:
 		return 0.0
 	var proceeds: float = shares * stock_prices.get(id, 0.0)
 	stock_shares[id] = 0.0
+	stock_cost_basis[id] = 0.0
 	add_gold_raw(proceeds)
 	stock_changed.emit()
 	return proceeds
+
+## 현재 보유분 기준 손익률(%). 보유 중이 아니면 0.
+func get_stock_profit_percent(id: String) -> float:
+	var basis: float = stock_cost_basis.get(id, 0.0)
+	if basis <= 0.0:
+		return 0.0
+	var shares: float = stock_shares.get(id, 0.0)
+	var value: float = shares * stock_prices.get(id, 0.0)
+	return (value - basis) / basis * 100.0
 
 # --- 뽑기(가챠) ---
 
@@ -305,25 +339,27 @@ func do_gacha() -> Dictionary:
 	var slots: Array = GameData.EQUIPMENT.keys()
 	var slot: String = slots[randi() % slots.size()]
 
-	var levels: int
+	var rarity: int
 	if gacha_pity >= GameData.GACHA_PITY_THRESHOLD - 1:
-		levels = GameData.GACHA_MAX_LEVELS
+		rarity = GameData.GACHA_MAX_LEVELS
 	else:
-		levels = randi_range(GameData.GACHA_MIN_LEVELS, GameData.GACHA_MAX_LEVELS)
-	gacha_pity = 0 if levels >= GameData.GACHA_MAX_LEVELS else gacha_pity + 1
+		rarity = randi_range(GameData.GACHA_MIN_LEVELS, GameData.GACHA_MAX_LEVELS)
+	gacha_pity = 0 if rarity >= GameData.GACHA_MAX_LEVELS else gacha_pity + 1
 
-	var new_level: int = equipment_levels[slot] + levels
-	equipment_levels[slot] = new_level
-	if new_level >= GameData.get_equipment_legendary_level(slot):
-		equipment_ever_maxed = true
+	var bonus: float = GameData.get_gacha_item_bonus(rarity)
+	var item: Dictionary = {"id": _next_gacha_item_id, "slot": slot, "rarity": rarity, "bonus": bonus}
+	_next_gacha_item_id += 1
+	gacha_items.append(item)
+
 	recalculate_stats()
 	currency_changed.emit()
 	equipment_changed.emit()
 	return {
 		"success": true,
 		"slot": slot,
-		"levels": levels,
-		"rarity": GameData.get_gacha_rarity_name(levels),
+		"rarity": GameData.get_gacha_rarity_name(rarity),
+		"rarity_level": rarity,
+		"bonus": bonus,
 	}
 
 # --- 사직서 던지기 (프레스티지) ---
@@ -342,8 +378,10 @@ func do_prestige() -> int:
 	stage_index = 0
 	mobs_defeated_in_stage = 0
 	equipment_levels = {"keyboard": 0, "chair": 0, "mouse": 0, "drink": 0}
+	gacha_items = []
 	boss_first_clear = {}
 	stock_shares = {}
+	stock_cost_basis = {}
 	_init_stock_prices()
 
 	recalculate_stats()
@@ -418,7 +456,10 @@ func to_save_dict() -> Dictionary:
 		"equipment_levels": equipment_levels.duplicate(),
 		"boss_first_clear": boss_first_clear.duplicate(),
 		"gacha_pity": gacha_pity,
+		"gacha_items": gacha_items.duplicate(true),
+		"next_gacha_item_id": _next_gacha_item_id,
 		"stock_shares": stock_shares.duplicate(),
+		"stock_cost_basis": stock_cost_basis.duplicate(),
 		"prestige_currency": prestige_currency,
 		"prestige_levels": prestige_levels.duplicate(),
 		"lifetime_max_stage_index": lifetime_max_stage_index,
@@ -441,10 +482,14 @@ func load_from_dict(data: Dictionary) -> void:
 		equipment_levels[key] = eq.get(key, 0)
 	boss_first_clear = data.get("boss_first_clear", {})
 	gacha_pity = data.get("gacha_pity", 0)
+	gacha_items = data.get("gacha_items", [])
+	_next_gacha_item_id = data.get("next_gacha_item_id", gacha_items.size() + 1)
 	var shares: Dictionary = data.get("stock_shares", {})
+	var basis: Dictionary = data.get("stock_cost_basis", {})
 	for s in GameData.STOCKS:
 		var id: String = s["id"]
 		stock_shares[id] = shares.get(id, 0.0)
+		stock_cost_basis[id] = basis.get(id, 0.0)
 	prestige_currency = data.get("prestige_currency", 0)
 	var levels: Dictionary = data.get("prestige_levels", {})
 	for key in prestige_levels.keys():
