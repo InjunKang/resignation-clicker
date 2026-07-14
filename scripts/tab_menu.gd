@@ -24,5 +24,5 @@ func _ready() -> void:
 		var btn := Button.new()
 		btn.text = tab["label"]
 		btn.custom_minimum_size = Vector2(80, 0)
-		btn.pressed.connect(func() -> void: tab_selected.emit(tab["id"]))
+		btn.pressed.connect(func() -> void: Sfx.play_click(); tab_selected.emit(tab["id"]))
 		hbox.add_child(btn)

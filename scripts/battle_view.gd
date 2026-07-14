@@ -246,6 +246,7 @@ func _player_attack_tick() -> void:
 		dmg *= GameState.get_crit_multiplier()
 		GameState.add_stress(2.0 + GameState.stage_index)
 		log_label.text = "월급루팡! 대박 효율!"
+		Sfx.play_crit()
 	dmg += GameState.get_companion_dps() * ATTACK_ROLL_INTERVAL
 	enemy_hp -= dmg
 	_spawn_floating_number(enemy_box, "-%s" % Fmt.short(dmg), Color(1.0, 0.35, 0.35) if crit else Color(1, 1, 1))
@@ -274,6 +275,7 @@ func _on_boss_defeated() -> void:
 		log_label.text = "%s 격파! 첫 클리어 보너스 법인카드 +%d" % [_boss_data.get("name", ""), int(GameData.BOSS_FIRST_CLEAR_DIAMOND_REWARD)]
 	else:
 		log_label.text = "%s 격파! 다음 스테이지로." % _boss_data.get("name", "")
+	Sfx.play_boss_clear()
 	GameState.advance_stage()
 	player_hp = GameState.max_hp
 	_spawn_next_enemy()
@@ -290,6 +292,7 @@ func _boss_attack_tick() -> void:
 	_flash(player_icon_label)
 
 func _on_boss_fail() -> void:
+	Sfx.play_boss_fail()
 	log_label.text = "멘탈이 나갔다... 다시 도전!"
 	player_hp = GameState.max_hp
 	enemy_hp = enemy_max_hp
@@ -297,6 +300,7 @@ func _on_boss_fail() -> void:
 	_boss_attack_timer = 0.0
 
 func _on_tap() -> void:
+	Sfx.play_tap()
 	GameState.add_stress(1.0)
 	log_label.text = "화장실에서 폰게임... 스트레스 해소 +1"
 
@@ -323,6 +327,7 @@ func _update_skills(delta: float) -> void:
 		if sk["cd"] > 0.0:
 			sk["cd"] = max(0.0, sk["cd"] - delta)
 		if auto_cast_enabled and sk["cd"] <= 0.0 and sk["active"] <= 0.0:
+			Sfx.play_skill()
 			_cast_skill(data["id"])
 			sk["cd"] = data["cooldown"]
 			sk["active"] = data["duration"]
@@ -332,6 +337,7 @@ func _on_skill_button_pressed(id: String) -> void:
 		return
 	for sk in _skills:
 		if sk["data"]["id"] == id and GameState.stage_index >= sk["data"]["unlock_stage"] and sk["cd"] <= 0.0:
+			Sfx.play_skill()
 			_cast_skill(id)
 			sk["cd"] = sk["data"]["cooldown"]
 			sk["active"] = sk["data"]["duration"]

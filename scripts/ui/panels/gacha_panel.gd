@@ -36,6 +36,7 @@ func _ready() -> void:
 func _on_gacha() -> void:
 	var res: Dictionary = GameState.do_gacha()
 	if res.get("success", false):
+		Sfx.play_gacha()
 		var slot_label: String = GameData.EQUIPMENT[res["slot"]]["label"]
 		result_label.text = "[%s] %s +%d Lv! 🎉" % [res["rarity"], slot_label, res["levels"]]
 	else:

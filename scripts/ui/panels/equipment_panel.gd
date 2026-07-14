@@ -19,7 +19,7 @@ func _ready() -> void:
 
 		var upgrade_btn := Button.new()
 		upgrade_btn.text = "업그레이드"
-		upgrade_btn.pressed.connect(func() -> void: GameState.upgrade_equipment(slot))
+		upgrade_btn.pressed.connect(_on_upgrade_pressed.bind(slot))
 		row.add_child(upgrade_btn)
 
 		rows[slot] = {"name_label": name_label, "button": upgrade_btn}
@@ -27,6 +27,10 @@ func _ready() -> void:
 	GameState.equipment_changed.connect(_refresh)
 	GameState.currency_changed.connect(_refresh)
 	_refresh()
+
+func _on_upgrade_pressed(slot: String) -> void:
+	if GameState.upgrade_equipment(slot):
+		Sfx.play_upgrade()
 
 func _refresh() -> void:
 	for slot in rows.keys():

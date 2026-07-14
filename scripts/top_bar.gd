@@ -38,9 +38,24 @@ func _ready() -> void:
 	diamond_label = Label.new()
 	currency_box.add_child(diamond_label)
 
+	var sep3 := Label.new()
+	sep3.text = "   "
+	currency_box.add_child(sep3)
+
+	var sound_toggle := Button.new()
+	sound_toggle.flat = true
+	sound_toggle.focus_mode = Control.FOCUS_NONE
+	sound_toggle.text = "🔊" if Sfx.enabled else "🔇"
+	sound_toggle.pressed.connect(_on_sound_toggle_pressed.bind(sound_toggle))
+	currency_box.add_child(sound_toggle)
+
 	GameState.currency_changed.connect(_refresh)
 	GameState.stage_changed.connect(_refresh)
 	_refresh()
+
+func _on_sound_toggle_pressed(btn: Button) -> void:
+	Sfx.enabled = not Sfx.enabled
+	btn.text = "🔊" if Sfx.enabled else "🔇"
 
 func _refresh() -> void:
 	var company_index: int = GameData.get_company_index(GameState.stage_index)
